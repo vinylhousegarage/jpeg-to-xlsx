@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
 )
 
 var ErrTokenNotFound = errors.New("slack token not found")

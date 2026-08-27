@@ -3,8 +3,8 @@ package notifier
 import (
 	"context"
 
-	slackapi "github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/api"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth"
+	slackapi "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/api"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
 )
 
 type stubTokenStore struct {

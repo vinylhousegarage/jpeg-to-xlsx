@@ -7,8 +7,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/apierror"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/storage"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/apierror"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage"
 )
 
 // 構造体を定義

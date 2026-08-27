@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
 )
 
 func TestNotifier_Notify_GetTokenError(t *testing.T) {

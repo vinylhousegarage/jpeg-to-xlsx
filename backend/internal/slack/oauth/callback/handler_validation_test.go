@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/apierror"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/apierror"
 )
 
 func TestHandler_ServeHTTP_RejectsUnsupportedMethod(t *testing.T) {
