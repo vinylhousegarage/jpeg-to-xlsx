@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"go.uber.org/zap"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/storage"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage"
 )
 
 type mockPresignerForHandler struct {

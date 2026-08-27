@@ -11,10 +11,10 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/bedrock"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/bedrock/prompts"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/config"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/logger"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/bedrock"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/bedrock/prompts"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/config"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/logger"
 )
 
 func main() {

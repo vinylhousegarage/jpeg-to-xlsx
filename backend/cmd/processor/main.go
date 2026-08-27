@@ -13,16 +13,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/bedrock"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/bedrock/prompts"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/config"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/logger"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/processor"
-	slackapi "github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/api"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/notifier"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/tokenstore"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/storage"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/usecase"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/bedrock"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/bedrock/prompts"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/config"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/logger"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/processor"
+	slackapi "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/api"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/notifier"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/tokenstore"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/usecase"
 )
 
 func main() {

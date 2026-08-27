@@ -1,4 +1,4 @@
-module github.com/vinylhousegarage/jpeg-to-json/backend
+module github.com/vinylhousegarage/jpeg-to-xlsx/backend
 
 go 1.26.3
 

@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/apierror"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/apierror"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/storage"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage"
 )
 
 // インターフェースを定義

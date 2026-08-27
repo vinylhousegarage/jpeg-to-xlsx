@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
 )
 
 func TestStore_Save_ValidationErrors(t *testing.T) {

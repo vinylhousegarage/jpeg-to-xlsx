@@ -13,17 +13,17 @@ import (
 	awssecretsmanager "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/config"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/logger"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/router"
-	platformsecretsmanager "github.com/vinylhousegarage/jpeg-to-json/backend/internal/platform/secretsmanager"
-	slackapi "github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/api"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth/callback"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/oauth/login"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/slack/tokenstore"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/storage"
-	"github.com/vinylhousegarage/jpeg-to-json/backend/internal/storage/put"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/config"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/logger"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/router"
+	platformsecretsmanager "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/secretsmanager"
+	slackapi "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/api"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth/callback"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth/login"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/tokenstore"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage/put"
 )
 
 func main() {
