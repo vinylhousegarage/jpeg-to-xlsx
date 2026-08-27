@@ -1,0 +1,32 @@
+# Git
+.git
+.github/
+.gitignore
+
+# Dependencies
+node_modules
+
+# Build/Output
+.next
+dist
+build
+
+# Environment files
+.env.local
+.env
+
+# Debug/Logs
+npm-debug.log
+
+# System/IDE settings
+.DS_Store
+.vscode
+.vscode/
+.idea
+.idea/
+
+# Documentation
+*.md
+
+# Testing
+tests/

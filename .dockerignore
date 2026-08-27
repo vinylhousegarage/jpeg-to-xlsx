@@ -1,0 +1,11 @@
+.git
+.gitignore
+
+.devcontainer
+.vscode
+
+node_modules
+
+dist
+build
+*.log
