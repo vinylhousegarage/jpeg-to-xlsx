@@ -122,7 +122,7 @@ func TestWorkflow_Execute_PutObjectError(t *testing.T) {
 
 	if !strings.Contains(
 		err.Error(),
-		"failed to put json to output s3",
+		"failed to put xlsx to output s3",
 	) {
 		t.Errorf(
 			"Execute() error = %q, want S3 put error",
