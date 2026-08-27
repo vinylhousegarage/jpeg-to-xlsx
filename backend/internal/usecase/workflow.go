@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/notifier"
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/xlsx"
 )
 
 // インターフェースを定義
@@ -146,29 +147,35 @@ func (w *Workflow) Execute(
 		return fmt.Errorf("failed to marshal json: %w", err)
 	}
 
-	// JSON保存先のオブジェクトキーを生成
+	// JSONをxlsxデータへ変換
+	xlsxData, err := xlsx.Convert(jsonBytes)
+	if err != nil {
+		return fmt.Errorf("failed to convert json to xlsx: %w", err)
+	}
+
+	// xlsx保存先のオブジェクトキーを生成
 	outputKey := strings.TrimSuffix(
 		inputKey,
 		filepath.Ext(inputKey),
-	) + ".json"
+	) + ".xlsx"
 
-	// JSONをS3へ保存
+	// xlsxをS3へ保存
 	_, err = w.s3Putter.PutObject(
 		ctx,
 		&s3.PutObjectInput{
 			Bucket: aws.String(w.outputBucket),
 			Key:    aws.String(outputKey),
-			Body:   bytes.NewReader(jsonBytes),
+			Body:   bytes.NewReader(xlsxData),
 			ContentType: aws.String(
-				"application/json; charset=utf-8",
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 			),
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to put json to output s3: %w", err)
+		return fmt.Errorf("failed to put xlsx to output s3: %w", err)
 	}
 
-	// JSONダウンロード用の署名付きURLを生成
+	// xlsxダウンロード用の署名付きURLを生成
 	presignReq, err := w.s3Presigner.PresignGetObject(
 		ctx,
 		&s3.GetObjectInput{

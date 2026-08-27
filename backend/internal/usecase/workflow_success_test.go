@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/xuri/excelize/v2"
 	"go.uber.org/zap"
 )
 
@@ -18,10 +19,10 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 		inputBucket         = "input-bucket"
 		outputBucket        = "output-bucket"
 		inputKey            = "SHOT-001.jpg"
-		expectedOutputKey   = "SHOT-001.json"
+		expectedOutputKey   = "SHOT-001.xlsx"
 		expectedShotNumber  = "SHOT-001"
 		expectedDownloadURL = "https://example.com/download"
-		expectedContentType = "application/json; charset=utf-8"
+		expectedContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	)
 
 	ctx := context.Background()
@@ -33,9 +34,7 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 		&mockS3Getter{
 			getOutput: &s3.GetObjectOutput{
 				Body: io.NopCloser(
-					bytes.NewReader(
-						[]byte("fake-image-bytes"),
-					),
+					bytes.NewReader([]byte("fake-image-bytes")),
 				),
 			},
 		},
@@ -53,45 +52,24 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 		zap.NewNop(),
 	)
 
-	err := workflow.Execute(
-		ctx,
-		inputBucket,
-		inputKey,
-	)
+	err := workflow.Execute(ctx, inputBucket, inputKey)
 	if err != nil {
-		t.Fatalf(
-			"Execute() error = %v",
-			err,
-		)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	if s3Putter.putInput == nil {
 		t.Fatal("PutObject() input is nil")
 	}
 
-	if got := aws.ToString(
-		s3Putter.putInput.Bucket,
-	); got != outputBucket {
-		t.Errorf(
-			"PutObject() Bucket = %q, want %q",
-			got,
-			outputBucket,
-		)
+	if got := aws.ToString(s3Putter.putInput.Bucket); got != outputBucket {
+		t.Errorf("PutObject() Bucket = %q, want %q", got, outputBucket)
 	}
 
-	if got := aws.ToString(
-		s3Putter.putInput.Key,
-	); got != expectedOutputKey {
-		t.Errorf(
-			"PutObject() Key = %q, want %q",
-			got,
-			expectedOutputKey,
-		)
+	if got := aws.ToString(s3Putter.putInput.Key); got != expectedOutputKey {
+		t.Errorf("PutObject() Key = %q, want %q", got, expectedOutputKey)
 	}
 
-	if got := aws.ToString(
-		s3Putter.putInput.ContentType,
-	); got != expectedContentType {
+	if got := aws.ToString(s3Putter.putInput.ContentType); got != expectedContentType {
 		t.Errorf(
 			"PutObject() ContentType = %q, want %q",
 			got,
@@ -99,18 +77,46 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 		)
 	}
 
+	xlsxData, err := io.ReadAll(s3Putter.putInput.Body)
+	if err != nil {
+		t.Fatalf("read uploaded XLSX data: %v", err)
+	}
+
+	file, err := excelize.OpenReader(bytes.NewReader(xlsxData))
+	if err != nil {
+		t.Fatalf("OpenReader() error = %v", err)
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	sheet := file.GetSheetName(0)
+
+	if got, err := file.GetCellValue(sheet, "A1"); err != nil || got != "key" {
+		t.Errorf("A1 = %q, %v; want %q, nil", got, err, "key")
+	}
+
+	if got, err := file.GetCellValue(sheet, "B1"); err != nil || got != "value" {
+		t.Errorf("B1 = %q, %v; want %q, nil", got, err, "value")
+	}
+
+	if got, err := file.GetCellValue(sheet, "A2"); err != nil || got != "key" {
+		t.Errorf("A2 = %q, %v; want %q, nil", got, err, "key")
+	}
+
+	if got, err := file.GetCellValue(sheet, "B2"); err != nil || got != "value" {
+		t.Errorf("B2 = %q, %v; want %q, nil", got, err, "value")
+	}
+
 	if !slackNotifier.called {
 		t.Fatal("Notify() was not called")
 	}
 
 	if slackNotifier.ctx != ctx {
-		t.Error(
-			"Notify() received an unexpected context",
-		)
+		t.Error("Notify() received an unexpected context")
 	}
 
-	if slackNotifier.message.ShotNumber !=
-		expectedShotNumber {
+	if slackNotifier.message.ShotNumber != expectedShotNumber {
 		t.Errorf(
 			"Notify() ShotNumber = %q, want %q",
 			slackNotifier.message.ShotNumber,
@@ -118,8 +124,7 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 		)
 	}
 
-	if slackNotifier.message.DownloadURL !=
-		expectedDownloadURL {
+	if slackNotifier.message.DownloadURL != expectedDownloadURL {
 		t.Errorf(
 			"Notify() DownloadURL = %q, want %q",
 			slackNotifier.message.DownloadURL,
