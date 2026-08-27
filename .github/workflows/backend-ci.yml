@@ -1,0 +1,44 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - dev
+    paths: &backend-ci-paths
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'compose.yaml'
+      - 'compose.prod.yaml'
+  pull_request:
+    branches:
+      - dev
+    paths: *backend-ci-paths
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.3'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+          args: --timeout 5m
+          working-directory: ./backend
+          install-mode: binary
+
+      - name: Run tests
+        run: go test ./...

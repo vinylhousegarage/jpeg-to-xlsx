@@ -1,0 +1,191 @@
+name: Infra Pipeline
+
+on:
+  pull_request:
+    branches:
+      - dev
+    paths: &infra-pipeline-paths
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infra/**'
+      - 'compose.yaml'
+      - 'Makefile'
+      - '.github/workflows/infra-pipeline.yml'
+
+  push:
+    branches:
+      - dev
+    paths: *infra-pipeline-paths
+
+concurrency:
+  group: infra-pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.3'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+          args: --timeout 5m
+          working-directory: ./backend
+          install-mode: binary
+
+      - name: Run tests
+        run: go test ./...
+
+  test-infra:
+    runs-on: ubuntu-latest
+    needs: test-backend
+    environment: staging
+
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.3'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Build Lambda binaries
+        working-directory: .
+        run: make build-lambda
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            infra/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/jpeg-to-json-cicd-role
+          aws-region: ap-northeast-1
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: CDK Synth
+        env: &staging-env
+          APP_ENV: staging
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID }}
+          PROMPT_FILE_NAME: ${{ vars.PROMPT_FILE_NAME }}
+          SLACK_CLIENT_ID: ${{ vars.SLACK_CLIENT_ID }}
+          SLACK_CLIENT_SECRET_ARN: ${{ vars.SLACK_CLIENT_SECRET_ARN }}
+          SLACK_REDIRECT_URI: ${{ vars.SLACK_REDIRECT_URI }}
+        run: npx cdk synth Dev-InfraStack
+
+      - name: CDK Diff
+        env: *staging-env
+        run: npx cdk diff Dev-InfraStack
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test-infra
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+
+    environment: staging
+
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.3'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Build Lambda binaries
+        working-directory: .
+        run: make build-lambda
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            infra/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/jpeg-to-json-cicd-role
+          aws-region: ap-northeast-1
+
+      - name: Build
+        run: npm run build
+
+      - name: CDK Deploy to Staging
+        env: *staging-env
+        run: npx cdk deploy Dev-InfraStack --require-approval never

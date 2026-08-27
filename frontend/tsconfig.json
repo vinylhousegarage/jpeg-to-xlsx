@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    /* 基本設定 */
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+
+    /* 型定義の設定 */
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"],
+
+    /* モジュール解決 */
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    /* React / JSX */
+    "jsx": "react-jsx",
+
+    /* 厳格な型チェック (既存設定 + 新規推奨) */
+    "strict": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+
+    /* ビルド・ツール統合 */
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "isolatedModules": true,
+
+    /* パスエイリアス */
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "tests/**/*.ts", "tests/**/*.tsx", "playwright.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}
