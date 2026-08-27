@@ -4,14 +4,15 @@ on:
   push:
     branches:
       - main
-    paths: &backend-ci-paths
+    paths: &ci-paths
       - 'backend/**'
+      - 'compose.yaml'
       - '.github/workflows/backend-ci.yml'
 
   pull_request:
     branches:
       - main
-    paths: *backend-ci-paths
+    paths: *ci-paths
 
 permissions:
   contents: read
@@ -45,3 +46,13 @@ jobs:
 
       - name: Run tests
         run: go test ./...
+
+  validate-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet --no-interpolate
