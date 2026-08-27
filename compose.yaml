@@ -6,7 +6,6 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     user: "${UID:-1000}:${GID:-1000}"
-    container_name: cdk
     working_dir: /workspace/infra
 
     volumes:
@@ -38,7 +37,6 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     user: "${UID:-1000}:${GID:-1000}"
-    container_name: go
     working_dir: /workspace/backend
 
     volumes:
@@ -82,7 +80,6 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     user: "${UID:-1000}:${GID:-1000}"
-    container_name: typescript
     working_dir: /workspace/frontend
 
     volumes:
@@ -103,7 +100,6 @@ services:
 
 networks:
   app-network:
-    name: app-network
     driver: bridge
 
 volumes:
