@@ -57,7 +57,7 @@ export class InfraStack extends cdk.Stack {
       }],
     });
 
-    // Outputバケット（生成したJSON保存用：1日で自動削除）
+    // Outputバケット（生成したXLSX保存用：1日で自動削除）
     const outputBucket = new s3.Bucket(this, 'OutputBucket', {
       removalPolicy,
       autoDeleteObjects,
@@ -96,7 +96,7 @@ export class InfraStack extends cdk.Stack {
       },
     });
 
-    // Processor Handler（Bedrock解析・JSON生成・Slack通知）
+    // Processor Handler（Bedrock解析・XLSX生成・Slack通知）
     const processorHandler = new lambda.Function(
       this,
       'ProcessorHandler',
@@ -144,8 +144,8 @@ export class InfraStack extends cdk.Stack {
     // 4. API Gateway の構築 (HTTP API)
 
     // HTTP API
-    const api = new apigwv2.HttpApi(this, 'JpegToJsonHttpApi', {
-      apiName: 'Jpeg To Json HTTP API',
+    const api = new apigwv2.HttpApi(this, 'JpegToXlsxHttpApi', {
+      apiName: 'Jpeg To Xlsx HTTP API',
       corsPreflight: {
         allowOrigins: ['*'],
         allowMethods: [apigwv2.CorsHttpMethod.ANY],

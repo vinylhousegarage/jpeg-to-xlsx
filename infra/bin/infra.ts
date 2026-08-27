@@ -24,6 +24,6 @@ const app = new cdk.App();
 */
 
 // 開発環境用
-new InfraStack(app, 'Dev-InfraStack', {
+new InfraStack(app, 'Dev-JpegToXlsx-InfraStack', {
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: 'ap-northeast-1' },
 });
