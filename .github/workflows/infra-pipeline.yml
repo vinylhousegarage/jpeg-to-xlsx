@@ -1,0 +1,145 @@
+name: Infra Pipeline
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - main
+    paths: &infra-pipeline-paths
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infra/**'
+      - 'compose.yaml'
+      - 'Makefile'
+      - '.github/workflows/infra-pipeline.yml'
+
+  push:
+    branches:
+      - main
+    paths: *infra-pipeline-paths
+
+concurrency:
+  group: infra-pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.3'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+          args: --timeout 5m
+          working-directory: ./backend
+          install-mode: binary
+
+      - name: Run backend tests
+        run: go test ./...
+
+  infra:
+    runs-on: ubuntu-latest
+    needs: test-backend
+    environment: staging
+
+    permissions:
+      id-token: write
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.3'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Build Lambda binaries
+        working-directory: .
+        run: make build-lambda
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            infra/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install infra dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        env:
+          VITE_API_BASE_URL: ''
+        run: npm run build
+
+      - name: Lint infra
+        run: npm run lint
+
+      - name: Build infra
+        run: npm run build
+
+      - name: Run infra tests
+        run: npm test -- --runInBand
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/jpeg-to-xlsx-cicd-role
+          aws-region: ap-northeast-1
+
+      - name: CDK Synth
+        env: &staging-env
+          APP_ENV: staging
+          BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID }}
+          PROMPT_FILE_NAME: ${{ vars.PROMPT_FILE_NAME }}
+          SLACK_CLIENT_ID: ${{ vars.SLACK_CLIENT_ID }}
+          SLACK_REDIRECT_URI: ${{ vars.SLACK_REDIRECT_URI }}
+        run: npx cdk synth Staging-JpegToXlsx-InfraStack
+
+      - name: CDK Diff
+        env: *staging-env
+        run: npx cdk diff Staging-JpegToXlsx-InfraStack
+
+      - name: CDK Deploy to Staging
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' ||
+           github.event_name == 'workflow_dispatch')
+        env: *staging-env
+        run: >-
+          npx cdk deploy Staging-JpegToXlsx-InfraStack
+          --require-approval never
