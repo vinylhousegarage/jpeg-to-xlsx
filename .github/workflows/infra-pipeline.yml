@@ -115,6 +115,26 @@ jobs:
       - name: Run infra tests
         run: npm test -- --runInBand
 
+      - name: Debug OIDC claims
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const token = await core.getIDToken(
+              'sts.amazonaws.com',
+            );
+
+            const payload = JSON.parse(
+              Buffer.from(
+                token.split('.')[1],
+                'base64url',
+              ).toString('utf8'),
+            );
+
+            core.info(`aud: ${payload.aud}`);
+            core.info(`sub: ${payload.sub}`);
+            core.info(`repository: ${payload.repository}`);
+            core.info(`environment: ${payload.environment}`);
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
