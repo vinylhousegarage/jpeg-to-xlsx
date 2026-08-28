@@ -56,7 +56,7 @@ describe('CicdBootstrapStack', () => {
                   'token.actions.githubusercontent.com:aud':
                     'sts.amazonaws.com',
                   'token.actions.githubusercontent.com:sub':
-                    'repo:vinylhousegarage/jpeg-to-xlsx:' +
+                    'repo:vinylhousegarage@172001646/jpeg-to-xlsx@1347837190:' +
                     'environment:staging',
                 },
               },

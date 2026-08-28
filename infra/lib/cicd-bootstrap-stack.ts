@@ -30,7 +30,7 @@ export class CicdBootstrapStack extends cdk.Stack {
             'token.actions.githubusercontent.com:aud':
               'sts.amazonaws.com',
             'token.actions.githubusercontent.com:sub':
-              'repo:vinylhousegarage/jpeg-to-xlsx:environment:staging',
+              'repo:vinylhousegarage@172001646/jpeg-to-xlsx@1347837190:environment:staging',
           },
         },
       ),
