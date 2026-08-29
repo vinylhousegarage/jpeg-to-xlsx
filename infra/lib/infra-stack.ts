@@ -13,6 +13,7 @@ import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -37,11 +38,42 @@ export class InfraStack extends cdk.Stack {
     const promptFileName =
       process.env.PROMPT_FILE_NAME || 'extractor.txt';
     const slackClientId = requireEnv('SLACK_CLIENT_ID');
-    const slackRedirectUri = requireEnv('SLACK_REDIRECT_URI');
+    const slackRedirectUri = requireEnv(
+      'SLACK_REDIRECT_URI',
+    );
 
     // リソース削除設定
     const removalPolicy = cdk.RemovalPolicy.DESTROY;
     const autoDeleteObjects = true;
+
+    // 1. Cognitoの作成
+
+    // Googleアカウント連携用User Pool
+    const userPool = new cognito.UserPool(
+      this,
+      'UserPool',
+      {
+        userPoolName: `jpeg-to-xlsx-${appEnv}-users`,
+        selfSignUpEnabled: false,
+        signInCaseSensitive: false,
+        removalPolicy,
+      },
+    );
+
+    // Cognito Managed Login用Domain
+    const cognitoDomainPrefix =
+      `jpeg-to-xlsx-${appEnv}-${this.account}`;
+
+    const userPoolDomain = userPool.addDomain(
+      'UserPoolDomain',
+      {
+        cognitoDomain: {
+          domainPrefix: cognitoDomainPrefix,
+        },
+      },
+    );
+
+    // 2. Slackリソースの作成
 
     // Slack Client Secret保存用Secret
     const slackSecret = new secretsmanager.Secret(
@@ -53,49 +85,6 @@ export class InfraStack extends cdk.Stack {
         description:
           `Slack client secret for jpeg-to-xlsx ${appEnv}`,
         removalPolicy,
-      },
-    );
-
-    // 1. S3 バケットの作成
-
-    // Inputバケット（画像アップロード用：1日で自動削除）
-    const inputBucket = new s3.Bucket(this, 'InputBucket', {
-      removalPolicy,
-      autoDeleteObjects,
-      lifecycleRules: [
-        {
-          expiration: cdk.Duration.days(1),
-        },
-      ],
-      cors: [
-        {
-          allowedMethods: [s3.HttpMethods.PUT],
-          allowedOrigins: ['*'],
-          allowedHeaders: ['*'],
-        },
-      ],
-    });
-
-    // Outputバケット（生成したXLSX保存用：1日で自動削除）
-    const outputBucket = new s3.Bucket(this, 'OutputBucket', {
-      removalPolicy,
-      autoDeleteObjects,
-      lifecycleRules: [
-        {
-          expiration: cdk.Duration.days(1),
-        },
-      ],
-    });
-
-    // Websiteバケット
-    const websiteBucket = new s3.Bucket(
-      this,
-      'WebsiteBucket',
-      {
-        removalPolicy,
-        autoDeleteObjects,
-        blockPublicAccess:
-          s3.BlockPublicAccess.BLOCK_ALL,
       },
     );
 
@@ -112,7 +101,58 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 2. Lambda 関数の作成（Goランタイム）
+    // 3. S3バケットの作成
+
+    // Inputバケット（画像アップロード用：1日で自動削除）
+    const inputBucket = new s3.Bucket(
+      this,
+      'InputBucket',
+      {
+        removalPolicy,
+        autoDeleteObjects,
+        lifecycleRules: [
+          {
+            expiration: cdk.Duration.days(1),
+          },
+        ],
+        cors: [
+          {
+            allowedMethods: [s3.HttpMethods.PUT],
+            allowedOrigins: ['*'],
+            allowedHeaders: ['*'],
+          },
+        ],
+      },
+    );
+
+    // Outputバケット（生成したXLSX保存用：1日で自動削除）
+    const outputBucket = new s3.Bucket(
+      this,
+      'OutputBucket',
+      {
+        removalPolicy,
+        autoDeleteObjects,
+        lifecycleRules: [
+          {
+            expiration: cdk.Duration.days(1),
+          },
+        ],
+      },
+    );
+
+    // Websiteバケット
+    const websiteBucket = new s3.Bucket(
+      this,
+      'WebsiteBucket',
+      {
+        removalPolicy,
+        autoDeleteObjects,
+        blockPublicAccess:
+          s3.BlockPublicAccess.BLOCK_ALL,
+      },
+    );
+
+    // 4. Lambda関数の作成（Goランタイム）
 
     // API Handler（HTTP API）
     const apiHandler = new lambda.Function(
@@ -136,7 +176,8 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // Processor Handler（Bedrock解析・XLSX生成・Slack通知）
+    // Processor Handler
+    // （Bedrock解析・XLSX生成・Slack通知）
     const processorHandler = new lambda.Function(
       this,
       'ProcessorHandler',
@@ -160,7 +201,7 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 3. 権限（IAM）とトリガー（Event）の設定
+    // 5. IAM権限とイベントトリガーの設定
 
     // API Handlerの権限
     inputBucket.grantWrite(apiHandler);
@@ -186,7 +227,7 @@ export class InfraStack extends cdk.Stack {
       new s3n.LambdaDestination(processorHandler),
     );
 
-    // 4. API Gatewayの構築（HTTP API）
+    // 6. API Gatewayの構築（HTTP API）
 
     const api = new apigwv2.HttpApi(
       this,
@@ -195,7 +236,9 @@ export class InfraStack extends cdk.Stack {
         apiName: 'Jpeg To Xlsx HTTP API',
         corsPreflight: {
           allowOrigins: ['*'],
-          allowMethods: [apigwv2.CorsHttpMethod.ANY],
+          allowMethods: [
+            apigwv2.CorsHttpMethod.ANY,
+          ],
           allowHeaders: ['*'],
         },
       },
@@ -224,7 +267,7 @@ export class InfraStack extends cdk.Stack {
       integration: apiIntegration,
     });
 
-    // 5. CloudFrontの作成
+    // 7. CloudFrontの作成
 
     const apiOrigin = new origins.HttpOrigin(
       `${api.apiId}.execute-api.${this.region}.amazonaws.com`,
@@ -244,13 +287,15 @@ export class InfraStack extends cdk.Stack {
               websiteBucket,
             ),
           viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            cloudfront.ViewerProtocolPolicy
+              .REDIRECT_TO_HTTPS,
         },
         additionalBehaviors: {
           '/api/*': {
             origin: apiOrigin,
             viewerProtocolPolicy:
-              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+              cloudfront.ViewerProtocolPolicy
+                .REDIRECT_TO_HTTPS,
             allowedMethods:
               cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy:
@@ -277,7 +322,7 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 6. Outputs
+    // 8. Outputs
 
     new cdk.CfnOutput(this, 'CloudFrontURL', {
       value:
@@ -288,6 +333,23 @@ export class InfraStack extends cdk.Stack {
       value: slackSecret.secretArn,
       description:
         'Secrets Manager ARN for the Slack client secret',
+    });
+
+    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+      value: userPool.userPoolId,
+      description: 'Cognito user pool ID',
+    });
+
+    new cdk.CfnOutput(this, 'CognitoDomain', {
+      value: userPoolDomain.baseUrl(),
+      description: 'Cognito managed login domain',
+    });
+
+    new cdk.CfnOutput(this, 'GoogleRedirectUri', {
+      value:
+        `${userPoolDomain.baseUrl()}/oauth2/idpresponse`,
+      description:
+        'Redirect URI for the Google OAuth client',
     });
   }
 }

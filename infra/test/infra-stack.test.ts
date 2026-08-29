@@ -63,6 +63,79 @@ describe('InfraStack', () => {
     restoreEnv('SLACK_REDIRECT_URI');
   });
 
+  test('creates Cognito user pool', () => {
+    template.resourceCountIs(
+      'AWS::Cognito::UserPool',
+      1,
+    );
+
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPool',
+      Match.objectLike({
+        UserPoolName:
+          'jpeg-to-xlsx-staging-users',
+        AdminCreateUserConfig: Match.objectLike({
+          AllowAdminCreateUserOnly: true,
+        }),
+        UsernameConfiguration: {
+          CaseSensitive: false,
+        },
+      }),
+    );
+  });
+
+  test('creates Cognito user pool domain', () => {
+    template.resourceCountIs(
+      'AWS::Cognito::UserPoolDomain',
+      1,
+    );
+
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPoolDomain',
+      Match.objectLike({
+        Domain:
+          'jpeg-to-xlsx-staging-123456789012',
+        UserPoolId: {
+          Ref: Match.stringLikeRegexp('^UserPool'),
+        },
+      }),
+    );
+  });
+
+  test('outputs Cognito user pool ID', () => {
+    template.hasOutput(
+      'CognitoUserPoolId',
+      Match.objectLike({
+        Description: 'Cognito user pool ID',
+        Value: {
+          Ref: Match.stringLikeRegexp('^UserPool'),
+        },
+      }),
+    );
+  });
+
+  test('outputs Cognito domain', () => {
+    template.hasOutput(
+      'CognitoDomain',
+      Match.objectLike({
+        Description:
+          'Cognito managed login domain',
+        Value: Match.anyValue(),
+      }),
+    );
+  });
+
+  test('outputs Google OAuth redirect URI', () => {
+    template.hasOutput(
+      'GoogleRedirectUri',
+      Match.objectLike({
+        Description:
+          'Redirect URI for the Google OAuth client',
+        Value: Match.anyValue(),
+      }),
+    );
+  });
+
   test('creates Slack client secret', () => {
     template.resourceCountIs(
       'AWS::SecretsManager::Secret',
