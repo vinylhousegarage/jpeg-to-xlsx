@@ -9,6 +9,7 @@ const testEnv = {
   SLACK_CLIENT_ID: 'test-slack-client-id',
   SLACK_REDIRECT_URI:
     'https://example.com/api/oauth/slack/callback',
+  GOOGLE_CLIENT_ID: 'test-google-client-id',
 };
 
 const originalEnv = {
@@ -17,6 +18,7 @@ const originalEnv = {
   PROMPT_FILE_NAME: process.env.PROMPT_FILE_NAME,
   SLACK_CLIENT_ID: process.env.SLACK_CLIENT_ID,
   SLACK_REDIRECT_URI: process.env.SLACK_REDIRECT_URI,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 };
 
 function restoreEnv(
@@ -61,6 +63,7 @@ describe('InfraStack', () => {
     restoreEnv('PROMPT_FILE_NAME');
     restoreEnv('SLACK_CLIENT_ID');
     restoreEnv('SLACK_REDIRECT_URI');
+    restoreEnv('GOOGLE_CLIENT_ID');
   });
 
   test('creates Cognito user pool', () => {
@@ -102,6 +105,65 @@ describe('InfraStack', () => {
     );
   });
 
+  test('creates Google identity provider', () => {
+    template.resourceCountIs(
+      'AWS::Cognito::UserPoolIdentityProvider',
+      1,
+    );
+
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPoolIdentityProvider',
+      Match.objectLike({
+        ProviderName: 'Google',
+        ProviderType: 'Google',
+        ProviderDetails: Match.objectLike({
+          client_id: 'test-google-client-id',
+          client_secret: Match.anyValue(),
+          authorize_scopes:
+            'openid email profile',
+        }),
+        AttributeMapping: Match.objectLike({
+          email: 'email',
+          given_name: 'given_name',
+          family_name: 'family_name',
+        }),
+        UserPoolId: {
+          Ref: Match.stringLikeRegexp('^UserPool'),
+        },
+      }),
+    );
+  });
+
+  test('creates Cognito user pool client', () => {
+    template.resourceCountIs(
+      'AWS::Cognito::UserPoolClient',
+      1,
+    );
+
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPoolClient',
+      Match.objectLike({
+        ClientName:
+          'jpeg-to-xlsx-staging-client',
+        GenerateSecret: false,
+        PreventUserExistenceErrors: 'ENABLED',
+        SupportedIdentityProviders: ['Google'],
+        AllowedOAuthFlows: ['code'],
+        AllowedOAuthFlowsUserPoolClient: true,
+        AllowedOAuthScopes: Match.arrayWith([
+          'openid',
+          'email',
+          'profile',
+        ]),
+        CallbackURLs: Match.anyValue(),
+        LogoutURLs: Match.anyValue(),
+        UserPoolId: {
+          Ref: Match.stringLikeRegexp('^UserPool'),
+        },
+      }),
+    );
+  });
+
   test('outputs Cognito user pool ID', () => {
     template.hasOutput(
       'CognitoUserPoolId',
@@ -109,6 +171,21 @@ describe('InfraStack', () => {
         Description: 'Cognito user pool ID',
         Value: {
           Ref: Match.stringLikeRegexp('^UserPool'),
+        },
+      }),
+    );
+  });
+
+  test('outputs Cognito user pool client ID', () => {
+    template.hasOutput(
+      'CognitoUserPoolClientId',
+      Match.objectLike({
+        Description:
+          'Cognito user pool client ID',
+        Value: {
+          Ref: Match.stringLikeRegexp(
+            '^UserPoolUserPoolClient',
+          ),
         },
       }),
     );

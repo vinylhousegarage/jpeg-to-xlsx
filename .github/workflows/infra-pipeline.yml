@@ -125,6 +125,7 @@ jobs:
         env: &staging-env
           APP_ENV: staging
           BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           PROMPT_FILE_NAME: ${{ vars.PROMPT_FILE_NAME }}
           SLACK_CLIENT_ID: ${{ vars.SLACK_CLIENT_ID }}
           SLACK_REDIRECT_URI: ${{ vars.SLACK_REDIRECT_URI }}
