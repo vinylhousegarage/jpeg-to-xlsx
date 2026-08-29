@@ -101,7 +101,22 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 3. S3バケットの作成
+    // 3. Googleリソースの作成
+
+    // Google OAuth Client Secret保存用Secret
+    const googleOAuthSecret = new secretsmanager.Secret(
+      this,
+      'GoogleOAuthClientSecret',
+      {
+        secretName:
+          `jpeg-to-xlsx/${appEnv}/google-oauth-client`,
+        description:
+          `Google OAuth client secret for jpeg-to-xlsx ${appEnv}`,
+        removalPolicy,
+      },
+    );
+
+    // 4. S3バケットの作成
 
     // Inputバケット（画像アップロード用：1日で自動削除）
     const inputBucket = new s3.Bucket(
@@ -152,7 +167,7 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 4. Lambda関数の作成（Goランタイム）
+    // 5. Lambda関数の作成（Goランタイム）
 
     // API Handler（HTTP API）
     const apiHandler = new lambda.Function(
@@ -201,7 +216,7 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 5. IAM権限とイベントトリガーの設定
+    // 6. IAM権限とイベントトリガーの設定
 
     // API Handlerの権限
     inputBucket.grantWrite(apiHandler);
@@ -227,7 +242,7 @@ export class InfraStack extends cdk.Stack {
       new s3n.LambdaDestination(processorHandler),
     );
 
-    // 6. API Gatewayの構築（HTTP API）
+    // 7. API Gatewayの構築（HTTP API）
 
     const api = new apigwv2.HttpApi(
       this,
@@ -267,7 +282,7 @@ export class InfraStack extends cdk.Stack {
       integration: apiIntegration,
     });
 
-    // 7. CloudFrontの作成
+    // 8. CloudFrontの作成
 
     const apiOrigin = new origins.HttpOrigin(
       `${api.apiId}.execute-api.${this.region}.amazonaws.com`,
@@ -322,7 +337,7 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 8. Outputs
+    // 9. Outputs
 
     new cdk.CfnOutput(this, 'CloudFrontURL', {
       value:
@@ -351,5 +366,15 @@ export class InfraStack extends cdk.Stack {
       description:
         'Redirect URI for the Google OAuth client',
     });
+
+    new cdk.CfnOutput(
+      this,
+      'GoogleOAuthClientSecretArn',
+      {
+        value: googleOAuthSecret.secretArn,
+        description:
+          'Secrets Manager ARN for the Google OAuth client secret',
+      },
+    );
   }
 }
