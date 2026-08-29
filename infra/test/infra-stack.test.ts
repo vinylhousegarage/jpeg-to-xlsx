@@ -137,11 +137,6 @@ describe('InfraStack', () => {
   });
 
   test('creates Slack client secret', () => {
-    template.resourceCountIs(
-      'AWS::SecretsManager::Secret',
-      1,
-    );
-
     template.hasResourceProperties(
       'AWS::SecretsManager::Secret',
       Match.objectLike({
@@ -203,6 +198,33 @@ describe('InfraStack', () => {
         Value: {
           Ref: Match.stringLikeRegexp(
             '^SlackClientSecret',
+          ),
+        },
+      }),
+    );
+  });
+
+  test('creates Google OAuth client secret', () => {
+    template.hasResourceProperties(
+      'AWS::SecretsManager::Secret',
+      Match.objectLike({
+        Name:
+          'jpeg-to-xlsx/staging/google-oauth-client',
+        Description:
+          'Google OAuth client secret for jpeg-to-xlsx staging',
+      }),
+    );
+  });
+
+  test('outputs Google OAuth client secret ARN', () => {
+    template.hasOutput(
+      'GoogleOAuthClientSecretArn',
+      Match.objectLike({
+        Description:
+          'Secrets Manager ARN for the Google OAuth client secret',
+        Value: {
+          Ref: Match.stringLikeRegexp(
+            '^GoogleOAuthClientSecret',
           ),
         },
       }),
