@@ -9,6 +9,7 @@ const testEnv = {
   SLACK_CLIENT_ID: 'test-slack-client-id',
   SLACK_REDIRECT_URI:
     'https://example.com/api/oauth/slack/callback',
+  GOOGLE_CLIENT_ID: 'test-google-client-id',
 };
 
 const originalEnv = {
@@ -17,6 +18,7 @@ const originalEnv = {
   PROMPT_FILE_NAME: process.env.PROMPT_FILE_NAME,
   SLACK_CLIENT_ID: process.env.SLACK_CLIENT_ID,
   SLACK_REDIRECT_URI: process.env.SLACK_REDIRECT_URI,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 };
 
 function restoreEnv(
@@ -61,6 +63,7 @@ describe('Secrets Manager resources', () => {
     restoreEnv('PROMPT_FILE_NAME');
     restoreEnv('SLACK_CLIENT_ID');
     restoreEnv('SLACK_REDIRECT_URI');
+    restoreEnv('GOOGLE_CLIENT_ID');
   });
 
   test('creates two Secrets Manager secrets', () => {

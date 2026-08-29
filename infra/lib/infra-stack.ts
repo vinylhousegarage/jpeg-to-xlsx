@@ -41,6 +41,9 @@ export class InfraStack extends cdk.Stack {
     const slackRedirectUri = requireEnv(
       'SLACK_REDIRECT_URI',
     );
+    const googleClientId = requireEnv(
+      'GOOGLE_CLIENT_ID',
+    );
 
     // リソース削除設定
     const removalPolicy = cdk.RemovalPolicy.DESTROY;
@@ -115,6 +118,36 @@ export class InfraStack extends cdk.Stack {
         removalPolicy,
       },
     );
+
+    // CognitoとGoogle OAuthの連携
+    const googleProvider =
+      new cognito.UserPoolIdentityProviderGoogle(
+        this,
+        'GoogleIdentityProvider',
+        {
+          userPool,
+          clientId: googleClientId,
+          clientSecretValue:
+            googleOAuthSecret.secretValueFromJson(
+              'client_secret',
+            ),
+          scopes: [
+            'openid',
+            'email',
+            'profile',
+          ],
+          attributeMapping: {
+            email:
+              cognito.ProviderAttribute.GOOGLE_EMAIL,
+            givenName:
+              cognito.ProviderAttribute
+                .GOOGLE_GIVEN_NAME,
+            familyName:
+              cognito.ProviderAttribute
+                .GOOGLE_FAMILY_NAME,
+          },
+        },
+      );
 
     // 4. S3バケットの作成
 
@@ -337,11 +370,43 @@ export class InfraStack extends cdk.Stack {
       },
     );
 
-    // 9. Outputs
+    // 9. Cognito User Pool Clientの作成
+
+    const applicationUrl =
+      `https://${distribution.distributionDomainName}`;
+
+    const userPoolClient = userPool.addClient(
+      'UserPoolClient',
+      {
+        userPoolClientName:
+          `jpeg-to-xlsx-${appEnv}-client`,
+        generateSecret: false,
+        preventUserExistenceErrors: true,
+        supportedIdentityProviders: [
+          cognito.UserPoolClientIdentityProvider.GOOGLE,
+        ],
+        oAuth: {
+          flows: {
+            authorizationCodeGrant: true,
+          },
+          scopes: [
+            cognito.OAuthScope.OPENID,
+            cognito.OAuthScope.EMAIL,
+            cognito.OAuthScope.PROFILE,
+          ],
+          callbackUrls: [applicationUrl],
+          logoutUrls: [applicationUrl],
+        },
+      },
+    );
+
+    // Google IdP作成後にUser Pool Clientを作成
+    userPoolClient.node.addDependency(googleProvider);
+
+    // 10. Outputs
 
     new cdk.CfnOutput(this, 'CloudFrontURL', {
-      value:
-        `https://${distribution.distributionDomainName}`,
+      value: applicationUrl,
     });
 
     new cdk.CfnOutput(this, 'SlackClientSecretArn', {
@@ -374,6 +439,16 @@ export class InfraStack extends cdk.Stack {
         value: googleOAuthSecret.secretArn,
         description:
           'Secrets Manager ARN for the Google OAuth client secret',
+      },
+    );
+
+    new cdk.CfnOutput(
+      this,
+      'CognitoUserPoolClientId',
+      {
+        value: userPoolClient.userPoolClientId,
+        description:
+          'Cognito user pool client ID',
       },
     );
   }
