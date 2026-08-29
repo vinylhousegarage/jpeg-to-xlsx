@@ -45,7 +45,7 @@ jobs:
           cache: true
           cache-dependency-path: backend/go.sum
 
-      - name: Run golangci-lint
+      - name: Lint backend
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
@@ -53,7 +53,10 @@ jobs:
           working-directory: ./backend
           install-mode: binary
 
-      - name: Run backend tests
+      - name: Build backend
+        run: go build ./...
+
+      - name: Test backend
         run: go test ./...
 
   infra:
@@ -100,11 +103,29 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Lint frontend
+        working-directory: ./frontend
+        run: npm run lint
+
       - name: Build frontend
         working-directory: ./frontend
         env:
           VITE_API_BASE_URL: ''
+          VITE_COGNITO_USER_POOL_ID: >-
+            ${{ vars.VITE_COGNITO_USER_POOL_ID }}
+          VITE_COGNITO_USER_POOL_CLIENT_ID: >-
+            ${{ vars.VITE_COGNITO_USER_POOL_CLIENT_ID }}
+          VITE_COGNITO_DOMAIN: >-
+            ${{ vars.VITE_COGNITO_DOMAIN }}
+          VITE_COGNITO_REDIRECT_SIGN_IN: >-
+            ${{ vars.VITE_COGNITO_REDIRECT_SIGN_IN }}
+          VITE_COGNITO_REDIRECT_SIGN_OUT: >-
+            ${{ vars.VITE_COGNITO_REDIRECT_SIGN_OUT }}
         run: npm run build
+
+      - name: Test frontend
+        working-directory: ./frontend
+        run: npm test -- --run
 
       - name: Lint infra
         run: npm run lint
@@ -112,13 +133,14 @@ jobs:
       - name: Build infra
         run: npm run build
 
-      - name: Run infra tests
+      - name: Test infra
         run: npm test -- --runInBand
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/jpeg-to-xlsx-cicd-role
+          role-to-assume: >-
+            arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/jpeg-to-xlsx-cicd-role
           aws-region: ap-northeast-1
 
       - name: CDK Synth
@@ -129,11 +151,15 @@ jobs:
           PROMPT_FILE_NAME: ${{ vars.PROMPT_FILE_NAME }}
           SLACK_CLIENT_ID: ${{ vars.SLACK_CLIENT_ID }}
           SLACK_REDIRECT_URI: ${{ vars.SLACK_REDIRECT_URI }}
-        run: npx cdk synth Staging-JpegToXlsx-InfraStack
+        run: >-
+          npx cdk synth
+          Staging-JpegToXlsx-InfraStack
 
       - name: CDK Diff
         env: *staging-env
-        run: npx cdk diff Staging-JpegToXlsx-InfraStack
+        run: >-
+          npx cdk diff
+          Staging-JpegToXlsx-InfraStack
 
       - name: CDK Deploy to Staging
         if: >-
@@ -142,5 +168,6 @@ jobs:
            github.event_name == 'workflow_dispatch')
         env: *staging-env
         run: >-
-          npx cdk deploy Staging-JpegToXlsx-InfraStack
+          npx cdk deploy
+          Staging-JpegToXlsx-InfraStack
           --require-approval never

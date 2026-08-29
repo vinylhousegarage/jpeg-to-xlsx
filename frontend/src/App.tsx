@@ -1,10 +1,13 @@
+import { AuthGate } from './auth/AuthGate';
+import { Main } from './components/Main';
 import { AppProvider } from './state/AppProvider';
-import { Main } from './components/Main'; 
 
 export const App = () => {
   return (
-    <AppProvider>
-      <Main />
-    </AppProvider>
+    <AuthGate>
+      <AppProvider>
+        <Main />
+      </AppProvider>
+    </AuthGate>
   );
 };
