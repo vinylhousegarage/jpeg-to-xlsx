@@ -12,6 +12,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.0
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.44.6
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
+	github.com/coreos/go-oidc/v3 v3.20.0
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/xuri/excelize/v2 v2.11.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/oauth2 v0.36.0
