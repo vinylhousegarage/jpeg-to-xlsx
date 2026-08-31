@@ -1,105 +1,110 @@
 package config
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
-func TestLoadBedrockConfig(t *testing.T) {
-	t.Run("success with defaults", func(t *testing.T) {
-		t.Setenv(
-			"BEDROCK_MODEL_ID",
-			"jp.anthropic.claude-sonnet-4-6",
+func TestLoadBedrockConfig(
+	t *testing.T,
+) {
+	tests := []struct {
+		name               string
+		modelID            string
+		promptFileName     string
+		wantModelID        string
+		wantPromptFileName string
+	}{
+		{
+			name:               "defaults prompt file name",
+			modelID:            testBedrockModelID,
+			promptFileName:     "",
+			wantModelID:        testBedrockModelID,
+			wantPromptFileName: defaultPromptFileName,
+		},
+		{
+			name:               "custom prompt file name",
+			modelID:            "test-model",
+			promptFileName:     "custom-prompt.txt",
+			wantModelID:        "test-model",
+			wantPromptFileName: "custom-prompt.txt",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(
+			test.name,
+			func(t *testing.T) {
+				t.Setenv(
+					"BEDROCK_MODEL_ID",
+					test.modelID,
+				)
+				t.Setenv(
+					"PROMPT_FILE_NAME",
+					test.promptFileName,
+				)
+
+				config, err :=
+					loadBedrockConfig()
+				if err != nil {
+					t.Fatalf(
+						"loadBedrockConfig() error = %v",
+						err,
+					)
+				}
+
+				if config.ModelID !=
+					test.wantModelID {
+					t.Errorf(
+						"ModelID = %q, want %q",
+						config.ModelID,
+						test.wantModelID,
+					)
+				}
+
+				if config.PromptFileName !=
+					test.wantPromptFileName {
+					t.Errorf(
+						"PromptFileName = %q, want %q",
+						config.PromptFileName,
+						test.wantPromptFileName,
+					)
+				}
+			},
 		)
-		t.Setenv(
-			"PROMPT_FILE_NAME",
-			"",
+	}
+}
+
+func TestLoadBedrockConfigRequiresModelID(
+	t *testing.T,
+) {
+	t.Setenv(
+		"BEDROCK_MODEL_ID",
+		"",
+	)
+	t.Setenv(
+		"PROMPT_FILE_NAME",
+		"",
+	)
+
+	config, err := loadBedrockConfig()
+	if err == nil {
+		t.Fatal(
+			"loadBedrockConfig() error = nil, want an error",
 		)
+	}
 
-		cfg, err := loadBedrockConfig()
-		if err != nil {
-			t.Fatalf(
-				"loadBedrockConfig() error = %v",
-				err,
-			)
-		}
-
-		if cfg.ModelID != "jp.anthropic.claude-sonnet-4-6" {
-			t.Errorf(
-				"expected ModelID %q, got %q",
-				"jp.anthropic.claude-sonnet-4-6",
-				cfg.ModelID,
-			)
-		}
-
-		if cfg.PromptFileName != defaultPromptFileName {
-			t.Errorf(
-				"expected PromptFileName %q, got %q",
-				defaultPromptFileName,
-				cfg.PromptFileName,
-			)
-		}
-	})
-
-	t.Run("success with custom prompt file", func(t *testing.T) {
-		t.Setenv(
-			"BEDROCK_MODEL_ID",
-			"test-model",
+	if config != (BedrockConfig{}) {
+		t.Errorf(
+			"loadBedrockConfig() config = %+v, want zero value",
+			config,
 		)
-		t.Setenv(
-			"PROMPT_FILE_NAME",
-			"custom-prompt.txt",
+	}
+
+	const wantError = "BEDROCK_MODEL_ID is required"
+
+	if err.Error() != wantError {
+		t.Errorf(
+			"loadBedrockConfig() error = %q, want %q",
+			err,
+			wantError,
 		)
-
-		cfg, err := loadBedrockConfig()
-		if err != nil {
-			t.Fatalf(
-				"loadBedrockConfig() error = %v",
-				err,
-			)
-		}
-
-		if cfg.ModelID != "test-model" {
-			t.Errorf(
-				"expected ModelID %q, got %q",
-				"test-model",
-				cfg.ModelID,
-			)
-		}
-
-		if cfg.PromptFileName != "custom-prompt.txt" {
-			t.Errorf(
-				"expected PromptFileName %q, got %q",
-				"custom-prompt.txt",
-				cfg.PromptFileName,
-			)
-		}
-	})
-
-	t.Run("missing model ID", func(t *testing.T) {
-		t.Setenv(
-			"BEDROCK_MODEL_ID",
-			"",
-		)
-		t.Setenv(
-			"PROMPT_FILE_NAME",
-			"",
-		)
-
-		_, err := loadBedrockConfig()
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-
-		if !strings.Contains(
-			err.Error(),
-			"BEDROCK_MODEL_ID is required",
-		) {
-			t.Errorf(
-				"expected error containing %q, got %q",
-				"BEDROCK_MODEL_ID is required",
-				err.Error(),
-			)
-		}
-	})
+	}
 }

@@ -2,7 +2,9 @@ package config
 
 import "testing"
 
-func TestLoadBedrockPlayground(t *testing.T) {
+func TestLoadBedrockPlayground(
+	t *testing.T,
+) {
 	t.Setenv(
 		"APP_ENV",
 		appEnvLocal,
@@ -17,14 +19,14 @@ func TestLoadBedrockPlayground(t *testing.T) {
 	)
 	t.Setenv(
 		"BEDROCK_MODEL_ID",
-		"jp.anthropic.claude-sonnet-4-6",
+		testBedrockModelID,
 	)
 	t.Setenv(
 		"PROMPT_FILE_NAME",
 		defaultPromptFileName,
 	)
 
-	cfg, err := LoadBedrockPlayground()
+	config, err := LoadBedrockPlayground()
 	if err != nil {
 		t.Fatalf(
 			"LoadBedrockPlayground() error = %v",
@@ -32,35 +34,44 @@ func TestLoadBedrockPlayground(t *testing.T) {
 		)
 	}
 
-	if cfg.App.Env != appEnvLocal {
+	if config == nil {
+		t.Fatal(
+			"LoadBedrockPlayground() config = nil",
+		)
+	}
+
+	if config.App.Env != appEnvLocal {
 		t.Errorf(
-			"expected App.Env %q, got %q",
+			"App.Env = %q, want %q",
+			config.App.Env,
 			appEnvLocal,
-			cfg.App.Env,
 		)
 	}
 
-	if cfg.AWS.Region != defaultAWSRegion {
+	if config.AWS.Region !=
+		defaultAWSRegion {
 		t.Errorf(
-			"expected AWS.Region %q, got %q",
+			"AWS.Region = %q, want %q",
+			config.AWS.Region,
 			defaultAWSRegion,
-			cfg.AWS.Region,
 		)
 	}
 
-	if cfg.Bedrock.ModelID != "jp.anthropic.claude-sonnet-4-6" {
+	if config.Bedrock.ModelID !=
+		testBedrockModelID {
 		t.Errorf(
-			"expected Bedrock.ModelID %q, got %q",
-			"jp.anthropic.claude-sonnet-4-6",
-			cfg.Bedrock.ModelID,
+			"Bedrock.ModelID = %q, want %q",
+			config.Bedrock.ModelID,
+			testBedrockModelID,
 		)
 	}
 
-	if cfg.Bedrock.PromptFileName != defaultPromptFileName {
+	if config.Bedrock.PromptFileName !=
+		defaultPromptFileName {
 		t.Errorf(
-			"expected Bedrock.PromptFileName %q, got %q",
+			"Bedrock.PromptFileName = %q, want %q",
+			config.Bedrock.PromptFileName,
 			defaultPromptFileName,
-			cfg.Bedrock.PromptFileName,
 		)
 	}
 }

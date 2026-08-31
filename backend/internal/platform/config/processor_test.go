@@ -2,12 +2,13 @@ package config
 
 import "testing"
 
-func TestLoadProcessor(t *testing.T) {
+func TestLoadProcessor(
+	t *testing.T,
+) {
 	t.Setenv(
 		"APP_ENV",
 		appEnvLocal,
 	)
-
 	t.Setenv(
 		"AWS_LAMBDA_FUNCTION_NAME",
 		"",
@@ -16,31 +17,28 @@ func TestLoadProcessor(t *testing.T) {
 		"AWS_REGION",
 		defaultAWSRegion,
 	)
-
 	t.Setenv(
 		"INPUT_BUCKET_NAME",
-		"my-test-bucket",
+		testInputBucketName,
 	)
 	t.Setenv(
 		"OUTPUT_BUCKET_NAME",
-		"my-output-bucket",
+		testOutputBucketName,
 	)
-
 	t.Setenv(
 		"BEDROCK_MODEL_ID",
-		"jp.anthropic.claude-sonnet-4-6",
+		testBedrockModelID,
 	)
 	t.Setenv(
 		"PROMPT_FILE_NAME",
 		defaultPromptFileName,
 	)
-
 	t.Setenv(
 		"SLACK_TOKEN_TABLE_NAME",
-		"slack-tokens",
+		testSlackTokenTableName,
 	)
 
-	cfg, err := LoadProcessor()
+	config, err := LoadProcessor()
 	if err != nil {
 		t.Fatalf(
 			"LoadProcessor() error = %v",
@@ -48,59 +46,71 @@ func TestLoadProcessor(t *testing.T) {
 		)
 	}
 
-	if cfg.App.Env != appEnvLocal {
+	if config == nil {
+		t.Fatal(
+			"LoadProcessor() config = nil",
+		)
+	}
+
+	if config.App.Env != appEnvLocal {
 		t.Errorf(
-			"expected App.Env %q, got %q",
+			"App.Env = %q, want %q",
+			config.App.Env,
 			appEnvLocal,
-			cfg.App.Env,
 		)
 	}
 
-	if cfg.AWS.Region != defaultAWSRegion {
+	if config.AWS.Region !=
+		defaultAWSRegion {
 		t.Errorf(
-			"expected AWS.Region %q, got %q",
+			"AWS.Region = %q, want %q",
+			config.AWS.Region,
 			defaultAWSRegion,
-			cfg.AWS.Region,
 		)
 	}
 
-	if cfg.Storage.InputBucketName != "my-test-bucket" {
+	if config.Storage.InputBucketName !=
+		testInputBucketName {
 		t.Errorf(
-			"expected Storage.InputBucketName %q, got %q",
-			"my-test-bucket",
-			cfg.Storage.InputBucketName,
+			"Storage.InputBucketName = %q, want %q",
+			config.Storage.InputBucketName,
+			testInputBucketName,
 		)
 	}
 
-	if cfg.Storage.OutputBucketName != "my-output-bucket" {
+	if config.Storage.OutputBucketName !=
+		testOutputBucketName {
 		t.Errorf(
-			"expected Storage.OutputBucketName %q, got %q",
-			"my-output-bucket",
-			cfg.Storage.OutputBucketName,
+			"Storage.OutputBucketName = %q, want %q",
+			config.Storage.OutputBucketName,
+			testOutputBucketName,
 		)
 	}
 
-	if cfg.Bedrock.ModelID != "jp.anthropic.claude-sonnet-4-6" {
+	if config.Bedrock.ModelID !=
+		testBedrockModelID {
 		t.Errorf(
-			"expected Bedrock.ModelID %q, got %q",
-			"jp.anthropic.claude-sonnet-4-6",
-			cfg.Bedrock.ModelID,
+			"Bedrock.ModelID = %q, want %q",
+			config.Bedrock.ModelID,
+			testBedrockModelID,
 		)
 	}
 
-	if cfg.Bedrock.PromptFileName != defaultPromptFileName {
+	if config.Bedrock.PromptFileName !=
+		defaultPromptFileName {
 		t.Errorf(
-			"expected Bedrock.PromptFileName %q, got %q",
+			"Bedrock.PromptFileName = %q, want %q",
+			config.Bedrock.PromptFileName,
 			defaultPromptFileName,
-			cfg.Bedrock.PromptFileName,
 		)
 	}
 
-	if cfg.SlackToken.TokenTableName != "slack-tokens" {
+	if config.SlackToken.TokenTableName !=
+		testSlackTokenTableName {
 		t.Errorf(
-			"expected SlackToken.TokenTableName %q, got %q",
-			"slack-tokens",
-			cfg.SlackToken.TokenTableName,
+			"SlackToken.TokenTableName = %q, want %q",
+			config.SlackToken.TokenTableName,
+			testSlackTokenTableName,
 		)
 	}
 }
