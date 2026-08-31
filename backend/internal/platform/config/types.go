@@ -1,10 +1,13 @@
 package config
 
+import "time"
+
 type APIConfig struct {
 	App     AppConfig
 	AWS     AWSConfig
-	Storage StorageConfig
+	Auth    BFFAuthConfig
 	Slack   SlackConfig
+	Storage StorageConfig
 }
 
 type ProcessorConfig struct {
@@ -51,4 +54,22 @@ type SlackConfig struct {
 
 type SlackTokenConfig struct {
 	TokenTableName string
+}
+
+type BFFAuthConfig struct {
+	CognitoClientID        string
+	CognitoClientSecretARN string
+
+	CognitoIssuer                string
+	CognitoAuthorizationEndpoint string
+	CognitoTokenEndpoint         string
+	CognitoRedirectURI           string
+
+	PostLoginRedirectURL string
+
+	OAuthStateTableName string
+	OAuthStateTTL       time.Duration
+
+	SessionTableName string
+	SessionLifetime  time.Duration
 }

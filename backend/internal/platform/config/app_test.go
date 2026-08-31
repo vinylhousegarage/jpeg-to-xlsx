@@ -2,60 +2,70 @@ package config
 
 import "testing"
 
-func TestLoadAppConfig(t *testing.T) {
+func TestLoadAppConfig(
+	t *testing.T,
+) {
 	tests := []struct {
-		name         string
-		env          string
-		expectedEnv  string
-		cookieSecure bool
+		name             string
+		environment      string
+		wantEnvironment  string
+		wantCookieSecure bool
 	}{
 		{
-			name:         "default local",
-			env:          "",
-			expectedEnv:  appEnvLocal,
-			cookieSecure: false,
+			name:             "default local",
+			environment:      "",
+			wantEnvironment:  appEnvLocal,
+			wantCookieSecure: false,
 		},
 		{
-			name:         "local",
-			env:          appEnvLocal,
-			expectedEnv:  appEnvLocal,
-			cookieSecure: false,
+			name:             "local",
+			environment:      appEnvLocal,
+			wantEnvironment:  appEnvLocal,
+			wantCookieSecure: false,
 		},
 		{
-			name:         "staging",
-			env:          appEnvStaging,
-			expectedEnv:  appEnvStaging,
-			cookieSecure: true,
+			name:             "staging",
+			environment:      appEnvStaging,
+			wantEnvironment:  appEnvStaging,
+			wantCookieSecure: true,
 		},
 		{
-			name:         "production",
-			env:          appEnvProduction,
-			expectedEnv:  appEnvProduction,
-			cookieSecure: true,
+			name:             "production",
+			environment:      appEnvProduction,
+			wantEnvironment:  appEnvProduction,
+			wantCookieSecure: true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("APP_ENV", tt.env)
-
-			cfg := loadAppConfig()
-
-			if cfg.Env != tt.expectedEnv {
-				t.Errorf(
-					"expected Env %q, got %q",
-					tt.expectedEnv,
-					cfg.Env,
+	for _, test := range tests {
+		t.Run(
+			test.name,
+			func(t *testing.T) {
+				t.Setenv(
+					"APP_ENV",
+					test.environment,
 				)
-			}
 
-			if cfg.CookieSecure != tt.cookieSecure {
-				t.Errorf(
-					"expected CookieSecure %v, got %v",
-					tt.cookieSecure,
-					cfg.CookieSecure,
-				)
-			}
-		})
+				config := loadAppConfig()
+
+				if config.Env !=
+					test.wantEnvironment {
+					t.Errorf(
+						"Env = %q, want %q",
+						config.Env,
+						test.wantEnvironment,
+					)
+				}
+
+				if config.CookieSecure !=
+					test.wantCookieSecure {
+					t.Errorf(
+						"CookieSecure = %v, want %v",
+						config.CookieSecure,
+						test.wantCookieSecure,
+					)
+				}
+			},
+		)
 	}
 }
