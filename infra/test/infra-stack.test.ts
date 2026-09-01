@@ -1,5 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
-import { Match, Template } from 'aws-cdk-lib/assertions';
+import {
+  Match,
+  Template,
+} from 'aws-cdk-lib/assertions';
+
 import { InfraStack } from '../lib/infra-stack';
 
 const testEnv = {
@@ -9,16 +13,23 @@ const testEnv = {
   SLACK_CLIENT_ID: 'test-slack-client-id',
   SLACK_REDIRECT_URI:
     'https://example.com/api/oauth/slack/callback',
-  GOOGLE_CLIENT_ID: 'test-google-client-id',
+  GOOGLE_CLIENT_ID:
+    'test-google-client-id',
 };
 
 const originalEnv = {
-  APP_ENV: process.env.APP_ENV,
-  BEDROCK_MODEL_ID: process.env.BEDROCK_MODEL_ID,
-  PROMPT_FILE_NAME: process.env.PROMPT_FILE_NAME,
-  SLACK_CLIENT_ID: process.env.SLACK_CLIENT_ID,
-  SLACK_REDIRECT_URI: process.env.SLACK_REDIRECT_URI,
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  APP_ENV:
+    process.env.APP_ENV,
+  BEDROCK_MODEL_ID:
+    process.env.BEDROCK_MODEL_ID,
+  PROMPT_FILE_NAME:
+    process.env.PROMPT_FILE_NAME,
+  SLACK_CLIENT_ID:
+    process.env.SLACK_CLIENT_ID,
+  SLACK_REDIRECT_URI:
+    process.env.SLACK_REDIRECT_URI,
+  GOOGLE_CLIENT_ID:
+    process.env.GOOGLE_CLIENT_ID,
 };
 
 function restoreEnv(
@@ -39,7 +50,10 @@ describe('InfraStack', () => {
   let template: Template;
 
   beforeAll(() => {
-    Object.assign(process.env, testEnv);
+    Object.assign(
+      process.env,
+      testEnv,
+    );
 
     const app = new cdk.App();
 
@@ -54,7 +68,8 @@ describe('InfraStack', () => {
       },
     );
 
-    template = Template.fromStack(stack);
+    template =
+      Template.fromStack(stack);
   });
 
   afterAll(() => {
@@ -77,9 +92,11 @@ describe('InfraStack', () => {
       Match.objectLike({
         UserPoolName:
           'jpeg-to-xlsx-staging-users',
-        AdminCreateUserConfig: Match.objectLike({
-          AllowAdminCreateUserOnly: true,
-        }),
+        AdminCreateUserConfig:
+          Match.objectLike({
+            AllowAdminCreateUserOnly:
+              true,
+          }),
         UsernameConfiguration: {
           CaseSensitive: false,
         },
@@ -99,7 +116,10 @@ describe('InfraStack', () => {
         Domain:
           'jpeg-to-xlsx-staging-123456789012',
         UserPoolId: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+          Ref:
+            Match.stringLikeRegexp(
+              '^UserPool',
+            ),
         },
       }),
     );
@@ -116,25 +136,32 @@ describe('InfraStack', () => {
       Match.objectLike({
         ProviderName: 'Google',
         ProviderType: 'Google',
-        ProviderDetails: Match.objectLike({
-          client_id: 'test-google-client-id',
-          client_secret: Match.anyValue(),
-          authorize_scopes:
-            'openid email profile',
-        }),
-        AttributeMapping: Match.objectLike({
-          email: 'email',
-          given_name: 'given_name',
-          family_name: 'family_name',
-        }),
+        ProviderDetails:
+          Match.objectLike({
+            client_id:
+              'test-google-client-id',
+            client_secret:
+              Match.anyValue(),
+            authorize_scopes:
+              'openid email profile',
+          }),
+        AttributeMapping:
+          Match.objectLike({
+            email: 'email',
+            given_name: 'given_name',
+            family_name: 'family_name',
+          }),
         UserPoolId: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+          Ref:
+            Match.stringLikeRegexp(
+              '^UserPool',
+            ),
         },
       }),
     );
   });
 
-  test('creates Cognito user pool client', () => {
+  test('creates Cognito user pool client for BFF', () => {
     template.resourceCountIs(
       'AWS::Cognito::UserPoolClient',
       1,
@@ -145,20 +172,104 @@ describe('InfraStack', () => {
       Match.objectLike({
         ClientName:
           'jpeg-to-xlsx-staging-client',
-        GenerateSecret: false,
-        PreventUserExistenceErrors: 'ENABLED',
-        SupportedIdentityProviders: ['Google'],
-        AllowedOAuthFlows: ['code'],
-        AllowedOAuthFlowsUserPoolClient: true,
-        AllowedOAuthScopes: Match.arrayWith([
-          'openid',
-          'email',
-          'profile',
-        ]),
-        CallbackURLs: Match.anyValue(),
-        LogoutURLs: Match.anyValue(),
+        GenerateSecret: true,
+        PreventUserExistenceErrors:
+          'ENABLED',
+        SupportedIdentityProviders: [
+          'Google',
+        ],
+        AllowedOAuthFlows: [
+          'code',
+        ],
+        AllowedOAuthFlowsUserPoolClient:
+          true,
+        AllowedOAuthScopes:
+          Match.arrayWith([
+            'openid',
+            'email',
+            'profile',
+          ]),
+        CallbackURLs:
+          Match.anyValue(),
+        LogoutURLs:
+          Match.anyValue(),
         UserPoolId: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+          Ref:
+            Match.stringLikeRegexp(
+              '^UserPool',
+            ),
+        },
+      }),
+    );
+  });
+
+  test('creates Cognito client secret', () => {
+    template.hasResourceProperties(
+      'AWS::SecretsManager::Secret',
+      Match.objectLike({
+        Name:
+          'jpeg-to-xlsx/staging/cognito-client-secret',
+        Description:
+          'Cognito client secret for jpeg-to-xlsx staging',
+        SecretString:
+          Match.anyValue(),
+      }),
+    );
+  });
+
+  test('creates Cognito OAuth state table', () => {
+    template.hasResourceProperties(
+      'AWS::DynamoDB::Table',
+      Match.objectLike({
+        TableName:
+          'jpeg-to-xlsx-staging-cognito-oauth-states',
+        BillingMode:
+          'PAY_PER_REQUEST',
+        AttributeDefinitions: [
+          {
+            AttributeName: 'state',
+            AttributeType: 'S',
+          },
+        ],
+        KeySchema: [
+          {
+            AttributeName: 'state',
+            KeyType: 'HASH',
+          },
+        ],
+        TimeToLiveSpecification: {
+          AttributeName:
+            'expires_at',
+          Enabled: true,
+        },
+      }),
+    );
+  });
+
+  test('creates authentication session table', () => {
+    template.hasResourceProperties(
+      'AWS::DynamoDB::Table',
+      Match.objectLike({
+        TableName:
+          'jpeg-to-xlsx-staging-auth-sessions',
+        BillingMode:
+          'PAY_PER_REQUEST',
+        AttributeDefinitions: [
+          {
+            AttributeName: 'id_hash',
+            AttributeType: 'S',
+          },
+        ],
+        KeySchema: [
+          {
+            AttributeName: 'id_hash',
+            KeyType: 'HASH',
+          },
+        ],
+        TimeToLiveSpecification: {
+          AttributeName:
+            'expires_at',
+          Enabled: true,
         },
       }),
     );
@@ -168,9 +279,13 @@ describe('InfraStack', () => {
     template.hasOutput(
       'CognitoUserPoolId',
       Match.objectLike({
-        Description: 'Cognito user pool ID',
+        Description:
+          'Cognito user pool ID',
         Value: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+          Ref:
+            Match.stringLikeRegexp(
+              '^UserPool',
+            ),
         },
       }),
     );
@@ -183,9 +298,10 @@ describe('InfraStack', () => {
         Description:
           'Cognito user pool client ID',
         Value: {
-          Ref: Match.stringLikeRegexp(
-            '^UserPoolUserPoolClient',
-          ),
+          Ref:
+            Match.stringLikeRegexp(
+              '^UserPoolUserPoolClient',
+            ),
         },
       }),
     );
@@ -197,7 +313,8 @@ describe('InfraStack', () => {
       Match.objectLike({
         Description:
           'Cognito managed login domain',
-        Value: Match.anyValue(),
+        Value:
+          Match.anyValue(),
       }),
     );
   });
@@ -208,7 +325,8 @@ describe('InfraStack', () => {
       Match.objectLike({
         Description:
           'Redirect URI for the Google OAuth client',
-        Value: Match.anyValue(),
+        Value:
+          Match.anyValue(),
       }),
     );
   });
@@ -230,37 +348,42 @@ describe('InfraStack', () => {
       'AWS::Lambda::Function',
       Match.objectLike({
         Environment: {
-          Variables: Match.objectLike({
-            SLACK_CLIENT_SECRET_ARN: {
-              Ref: Match.stringLikeRegexp(
-                '^SlackClientSecret',
-              ),
-            },
-          }),
+          Variables:
+            Match.objectLike({
+              SLACK_CLIENT_SECRET_ARN: {
+                Ref:
+                  Match.stringLikeRegexp(
+                    '^SlackClientSecret',
+                  ),
+              },
+            }),
         },
       }),
     );
   });
 
-  test('grants API Lambda permission to read secret', () => {
+  test('grants API Lambda permission to read Slack secret', () => {
     template.hasResourceProperties(
       'AWS::IAM::Policy',
       Match.objectLike({
         PolicyDocument: {
-          Statement: Match.arrayWith([
-            Match.objectLike({
-              Action: Match.arrayWith([
-                'secretsmanager:GetSecretValue',
-                'secretsmanager:DescribeSecret',
-              ]),
-              Effect: 'Allow',
-              Resource: {
-                Ref: Match.stringLikeRegexp(
-                  '^SlackClientSecret',
-                ),
-              },
-            }),
-          ]),
+          Statement:
+            Match.arrayWith([
+              Match.objectLike({
+                Action:
+                  Match.arrayWith([
+                    'secretsmanager:GetSecretValue',
+                    'secretsmanager:DescribeSecret',
+                  ]),
+                Effect: 'Allow',
+                Resource: {
+                  Ref:
+                    Match.stringLikeRegexp(
+                      '^SlackClientSecret',
+                    ),
+                },
+              }),
+            ]),
         },
       }),
     );
@@ -273,9 +396,10 @@ describe('InfraStack', () => {
         Description:
           'Secrets Manager ARN for the Slack client secret',
         Value: {
-          Ref: Match.stringLikeRegexp(
-            '^SlackClientSecret',
-          ),
+          Ref:
+            Match.stringLikeRegexp(
+              '^SlackClientSecret',
+            ),
         },
       }),
     );
@@ -300,9 +424,10 @@ describe('InfraStack', () => {
         Description:
           'Secrets Manager ARN for the Google OAuth client secret',
         Value: {
-          Ref: Match.stringLikeRegexp(
-            '^GoogleOAuthClientSecret',
-          ),
+          Ref:
+            Match.stringLikeRegexp(
+              '^GoogleOAuthClientSecret',
+            ),
         },
       }),
     );

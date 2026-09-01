@@ -69,7 +69,7 @@ describe('Secrets Manager resources', () => {
   test('creates two Secrets Manager secrets', () => {
     template.resourceCountIs(
       'AWS::SecretsManager::Secret',
-      2,
+      3,
     );
   });
 });
