@@ -1,13 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
-import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
-import {
-  HttpLambdaIntegration,
-} from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import { Construct } from 'constructs';
 
@@ -17,6 +10,9 @@ import {
 import {
   createComputeResources,
 } from './constructs/compute-resources';
+import {
+  createDeliveryResources,
+} from './constructs/delivery-resources';
 import {
   createSlackResources,
 } from './constructs/slack-resources';
@@ -71,6 +67,7 @@ export class InfraStack extends cdk.Stack {
     );
 
     // リソース削除設定
+
     const removalPolicy =
       cdk.RemovalPolicy.DESTROY;
 
@@ -98,8 +95,7 @@ export class InfraStack extends cdk.Stack {
         },
       );
 
-    // 3. Lambda関数の作成
-    // （Goランタイム）
+    // 3. Lambda関数の作成（Goランタイム）
 
     const computeResources =
       createComputeResources(
@@ -128,6 +124,7 @@ export class InfraStack extends cdk.Stack {
     // 4. IAM権限とイベントトリガー
 
     // API Handlerの権限
+
     storageResources.inputBucket
       .grantWrite(
         computeResources
@@ -147,6 +144,7 @@ export class InfraStack extends cdk.Stack {
       );
 
     // Processor Handlerの権限
+
     storageResources.inputBucket
       .grantRead(
         computeResources
@@ -165,8 +163,8 @@ export class InfraStack extends cdk.Stack {
           .processorHandler,
       );
 
-    // Processor Handlerに
-    // Bedrockの実行権限を付与
+    // Processor HandlerにBedrockの実行権限を付与
+
     computeResources.processorHandler
       .addToRolePolicy(
         new iam.PolicyStatement({
@@ -177,8 +175,8 @@ export class InfraStack extends cdk.Stack {
         }),
       );
 
-    // Inputバケットへの画像保存時に
-    // Processor Handlerを起動
+    // Inputバケットへの画像保存時にProcessor Handlerを起動
+
     storageResources.inputBucket
       .addEventNotification(
         s3.EventType.OBJECT_CREATED,
@@ -188,165 +186,45 @@ export class InfraStack extends cdk.Stack {
         ),
       );
 
-    // 5. API Gatewayの構築
-    // （HTTP API）
+    // 5. 配信リソースの作成（API Gateway・CloudFront・Frontend）
 
-    const api = new apigwv2.HttpApi(
-      this,
-      'JpegToXlsxHttpApi',
-      {
-        apiName:
-          'Jpeg To Xlsx HTTP API',
-        corsPreflight: {
-          allowOrigins: ['*'],
-          allowMethods: [
-            apigwv2
-              .CorsHttpMethod
-              .ANY,
-          ],
-          allowHeaders: ['*'],
-        },
-      },
-    );
-
-    const apiIntegration =
-      new HttpLambdaIntegration(
-        'ApiIntegration',
-        computeResources
-          .apiHandler,
-      );
-
-    api.addRoutes({
-      path:
-        '/api/storage/upload',
-      methods: [
-        apigwv2.HttpMethod.POST,
-      ],
-      integration:
-        apiIntegration,
-    });
-
-    api.addRoutes({
-      path:
-        '/api/oauth/slack/login',
-      methods: [
-        apigwv2.HttpMethod.GET,
-      ],
-      integration:
-        apiIntegration,
-    });
-
-    api.addRoutes({
-      path:
-        '/api/oauth/slack/callback',
-      methods: [
-        apigwv2.HttpMethod.GET,
-      ],
-      integration:
-        apiIntegration,
-    });
-
-    // 6. CloudFrontの作成
-
-    const apiOrigin =
-      new origins.HttpOrigin(
-        `${api.apiId}.execute-api.${this.region}.amazonaws.com`,
-        {
-          protocolPolicy:
-            cloudfront
-              .OriginProtocolPolicy
-              .HTTPS_ONLY,
-        },
-      );
-
-    const distribution =
-      new cloudfront.Distribution(
+    const deliveryResources =
+      createDeliveryResources(
         this,
-        'WebsiteDistribution',
         {
-          defaultBehavior: {
-            origin:
-              origins
-                .S3BucketOrigin
-                .withOriginAccessControl(
-                  storageResources
-                    .websiteBucket,
-                ),
-            viewerProtocolPolicy:
-              cloudfront
-                .ViewerProtocolPolicy
-                .REDIRECT_TO_HTTPS,
-          },
-          additionalBehaviors: {
-            '/api/*': {
-              origin:
-                apiOrigin,
-              viewerProtocolPolicy:
-                cloudfront
-                  .ViewerProtocolPolicy
-                  .REDIRECT_TO_HTTPS,
-              allowedMethods:
-                cloudfront
-                  .AllowedMethods
-                  .ALLOW_ALL,
-              cachePolicy:
-                cloudfront
-                  .CachePolicy
-                  .CACHING_DISABLED,
-              originRequestPolicy:
-                cloudfront
-                  .OriginRequestPolicy
-                  .ALL_VIEWER_EXCEPT_HOST_HEADER,
-            },
-          },
-          defaultRootObject:
-            'index.html',
+          apiHandler:
+            computeResources
+              .apiHandler,
+          websiteBucket:
+            storageResources
+              .websiteBucket,
         },
       );
 
-    const applicationUrl =
-      `https://${distribution.distributionDomainName}`;
-
-    // 7. Cognito認証リソースの作成
+    // 6. Cognito認証リソースの作成
 
     const authResources =
       createAuthResources(
         this,
         {
           appEnv,
-          applicationUrl,
+          applicationUrl:
+            deliveryResources
+              .applicationUrl,
           googleClientId,
           removalPolicy,
         },
       );
 
-    // 8. Frontendのデプロイ
-
-    new s3deploy.BucketDeployment(
-      this,
-      'DeployWebsite',
-      {
-        sources: [
-          s3deploy.Source.asset(
-            '../frontend/dist',
-          ),
-        ],
-        destinationBucket:
-          storageResources
-            .websiteBucket,
-        distribution,
-        distributionPaths: ['/*'],
-      },
-    );
-
-    // 9. Outputs
+    // 7. Outputs
 
     new cdk.CfnOutput(
       this,
       'CloudFrontURL',
       {
         value:
-          applicationUrl,
+          deliveryResources
+            .applicationUrl,
       },
     );
 
