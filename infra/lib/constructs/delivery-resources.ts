@@ -11,14 +11,20 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 
 export type DeliveryResourcesProps = {
-  apiHandler: lambda.IFunction;
-  websiteBucket: s3.IBucket;
+  apiHandler:
+    lambda.IFunction;
+
+  websiteBucket:
+    s3.IBucket;
 };
 
 export type DeliveryResources = {
-  api: apigwv2.HttpApi;
+  api:
+    apigwv2.HttpApi;
+
   distribution:
     cloudfront.Distribution;
+
   applicationUrl: string;
 };
 
@@ -28,23 +34,18 @@ export const createDeliveryResources = (
 ): DeliveryResources => {
   const stack = cdk.Stack.of(scope);
 
+  // HTTP API
+
   const api = new apigwv2.HttpApi(
     scope,
     'JpegToXlsxHttpApi',
     {
       apiName:
         'Jpeg To Xlsx HTTP API',
-      corsPreflight: {
-        allowOrigins: ['*'],
-        allowMethods: [
-          apigwv2
-            .CorsHttpMethod
-            .ANY,
-        ],
-        allowHeaders: ['*'],
-      },
     },
   );
+
+  // API Lambdaとの統合
 
   const apiIntegration =
     new HttpLambdaIntegration(
@@ -52,15 +53,31 @@ export const createDeliveryResources = (
       props.apiHandler,
     );
 
+  // Cognitoログイン
+
   api.addRoutes({
     path:
-      '/api/storage/upload',
+      '/api/auth/login',
     methods: [
-      apigwv2.HttpMethod.POST,
+      apigwv2.HttpMethod.GET,
     ],
     integration:
       apiIntegration,
   });
+
+  // Cognitoコールバック
+
+  api.addRoutes({
+    path:
+      '/api/auth/callback',
+    methods: [
+      apigwv2.HttpMethod.GET,
+    ],
+    integration:
+      apiIntegration,
+  });
+
+  // Slack OAuthログイン
 
   api.addRoutes({
     path:
@@ -72,6 +89,8 @@ export const createDeliveryResources = (
       apiIntegration,
   });
 
+  // Slack OAuthコールバック
+
   api.addRoutes({
     path:
       '/api/oauth/slack/callback',
@@ -81,6 +100,20 @@ export const createDeliveryResources = (
     integration:
       apiIntegration,
   });
+
+  // S3アップロードURL発行
+
+  api.addRoutes({
+    path:
+      '/api/storage/upload',
+    methods: [
+      apigwv2.HttpMethod.POST,
+    ],
+    integration:
+      apiIntegration,
+  });
+
+  // API Gateway用CloudFront Origin
 
   const apiOrigin =
     new origins.HttpOrigin(
@@ -92,6 +125,8 @@ export const createDeliveryResources = (
             .HTTPS_ONLY,
       },
     );
+
+  // CloudFront Distribution
 
   const distribution =
     new cloudfront.Distribution(
@@ -140,6 +175,8 @@ export const createDeliveryResources = (
   const applicationUrl =
     `https://${distribution.distributionDomainName}`;
 
+  // Frontendのデプロイ
+
   new s3deploy.BucketDeployment(
     scope,
     'DeployWebsite',
@@ -152,7 +189,9 @@ export const createDeliveryResources = (
       destinationBucket:
         props.websiteBucket,
       distribution,
-      distributionPaths: ['/*'],
+      distributionPaths: [
+        '/*',
+      ],
     },
   );
 

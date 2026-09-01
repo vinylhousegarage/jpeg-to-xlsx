@@ -7,27 +7,60 @@ import { Construct } from 'constructs';
 
 export type ComputeResourcesProps = {
   appEnv: string;
+
   bedrockModelId: string;
+
   promptFileName: string;
+
   slackClientId: string;
+
   slackRedirectUri: string;
-  inputBucket: s3.IBucket;
-  outputBucket: s3.IBucket;
+
+  inputBucket:
+    s3.IBucket;
+
+  outputBucket:
+    s3.IBucket;
+
   slackSecret:
     secretsmanager.ISecret;
+
   slackTokenTable:
     dynamodb.ITable;
+
+  cognitoClientId: string;
+
+  cognitoClientSecretArn: string;
+
+  cognitoIssuer: string;
+
+  cognitoAuthorizationEndpoint: string;
+
+  cognitoTokenEndpoint: string;
+
+  cognitoRedirectUri: string;
+
+  postLoginRedirectUrl: string;
+
+  oauthStateTableName: string;
+
+  sessionTableName: string;
 };
 
 export type ComputeResources = {
-  apiHandler: lambda.Function;
-  processorHandler: lambda.Function;
+  apiHandler:
+    lambda.Function;
+
+  processorHandler:
+    lambda.Function;
 };
 
 export const createComputeResources = (
   scope: Construct,
   props: ComputeResourcesProps,
 ): ComputeResources => {
+  // API Handler
+
   const apiHandler =
     new lambda.Function(
       scope,
@@ -49,22 +82,57 @@ export const createComputeResources = (
         environment: {
           APP_ENV:
             props.appEnv,
+
           INPUT_BUCKET_NAME:
             props.inputBucket
               .bucketName,
+
           SLACK_CLIENT_ID:
             props.slackClientId,
+
           SLACK_CLIENT_SECRET_ARN:
             props.slackSecret
               .secretArn,
+
           SLACK_REDIRECT_URI:
             props.slackRedirectUri,
+
           SLACK_TOKEN_TABLE_NAME:
             props.slackTokenTable
               .tableName,
+
+          COGNITO_CLIENT_ID:
+            props.cognitoClientId,
+
+          COGNITO_CLIENT_SECRET_ARN:
+            props.cognitoClientSecretArn,
+
+          COGNITO_ISSUER:
+            props.cognitoIssuer,
+
+          COGNITO_AUTHORIZATION_ENDPOINT:
+            props
+              .cognitoAuthorizationEndpoint,
+
+          COGNITO_TOKEN_ENDPOINT:
+            props.cognitoTokenEndpoint,
+
+          COGNITO_REDIRECT_URI:
+            props.cognitoRedirectUri,
+
+          AUTH_REDIRECT_URL:
+            props.postLoginRedirectUrl,
+
+          COGNITO_OAUTH_STATE_TABLE_NAME:
+            props.oauthStateTableName,
+
+          AUTH_SESSION_TABLE_NAME:
+            props.sessionTableName,
         },
       },
     );
+
+  // Processor Handler（Bedrock解析・XLSX生成・Slack通知）
 
   const processorHandler =
     new lambda.Function(
@@ -87,16 +155,21 @@ export const createComputeResources = (
         environment: {
           APP_ENV:
             props.appEnv,
+
           INPUT_BUCKET_NAME:
             props.inputBucket
               .bucketName,
+
           OUTPUT_BUCKET_NAME:
             props.outputBucket
               .bucketName,
+
           BEDROCK_MODEL_ID:
             props.bedrockModelId,
+
           PROMPT_FILE_NAME:
             props.promptFileName,
+
           SLACK_TOKEN_TABLE_NAME:
             props.slackTokenTable
               .tableName,

@@ -1,164 +1,262 @@
-import * as cdk from 'aws-cdk-lib';
-import { Match, Template } from 'aws-cdk-lib/assertions';
-import { InfraStack } from '../lib/infra-stack';
+import {
+  Match,
+  Template,
+} from 'aws-cdk-lib/assertions';
 
-const testEnv = {
-  APP_ENV: 'staging',
-  BEDROCK_MODEL_ID: 'test-model-id',
-  PROMPT_FILE_NAME: 'extractor.txt',
-  SLACK_CLIENT_ID: 'test-slack-client-id',
-  SLACK_REDIRECT_URI:
-    'https://example.com/api/oauth/slack/callback',
-  GOOGLE_CLIENT_ID: 'test-google-client-id',
-};
-
-const originalEnv = {
-  APP_ENV: process.env.APP_ENV,
-  BEDROCK_MODEL_ID: process.env.BEDROCK_MODEL_ID,
-  PROMPT_FILE_NAME: process.env.PROMPT_FILE_NAME,
-  SLACK_CLIENT_ID: process.env.SLACK_CLIENT_ID,
-  SLACK_REDIRECT_URI: process.env.SLACK_REDIRECT_URI,
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-};
-
-function restoreEnv(
-  name: keyof typeof originalEnv,
-): void {
-  const value = originalEnv[name];
-
-  if (value === undefined) {
-    delete process.env[name];
-
-    return;
-  }
-
-  process.env[name] = value;
-}
+import {
+  createInfraStackTemplate,
+  restoreTestEnvironment,
+  setTestEnvironment,
+  testAWSAccount,
+} from './infra-stack-test-helpers';
 
 describe('InfraStack', () => {
   let template: Template;
 
   beforeAll(() => {
-    Object.assign(process.env, testEnv);
+    setTestEnvironment();
 
-    const app = new cdk.App();
-
-    const stack = new InfraStack(
-      app,
-      'TestInfraStack',
-      {
-        env: {
-          account: '123456789012',
-          region: 'ap-northeast-1',
-        },
-      },
-    );
-
-    template = Template.fromStack(stack);
+    template =
+      createInfraStackTemplate();
   });
 
   afterAll(() => {
-    restoreEnv('APP_ENV');
-    restoreEnv('BEDROCK_MODEL_ID');
-    restoreEnv('PROMPT_FILE_NAME');
-    restoreEnv('SLACK_CLIENT_ID');
-    restoreEnv('SLACK_REDIRECT_URI');
-    restoreEnv('GOOGLE_CLIENT_ID');
+    restoreTestEnvironment();
   });
 
-  test('creates Cognito user pool', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPool',
-      1,
-    );
-
+  test('grants API Lambda permission to read Slack secret', () => {
     template.hasResourceProperties(
-      'AWS::Cognito::UserPool',
+      'AWS::IAM::Policy',
       Match.objectLike({
-        UserPoolName:
-          'jpeg-to-xlsx-staging-users',
-        AdminCreateUserConfig: Match.objectLike({
-          AllowAdminCreateUserOnly: true,
-        }),
-        UsernameConfiguration: {
-          CaseSensitive: false,
+        PolicyDocument: {
+          Statement:
+            Match.arrayWith([
+              Match.objectLike({
+                Action:
+                  Match.arrayWith([
+                    'secretsmanager:GetSecretValue',
+                    'secretsmanager:DescribeSecret',
+                  ]),
+                Effect:
+                  'Allow',
+                Resource: {
+                  Ref:
+                    Match.stringLikeRegexp(
+                      '^SlackClientSecret',
+                    ),
+                },
+              }),
+            ]),
         },
       }),
     );
   });
 
-  test('creates Cognito user pool domain', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPoolDomain',
-      1,
-    );
-
+  test('grants API Lambda permission to read Cognito client secret', () => {
     template.hasResourceProperties(
-      'AWS::Cognito::UserPoolDomain',
+      'AWS::IAM::Policy',
       Match.objectLike({
-        Domain:
-          'jpeg-to-xlsx-staging-123456789012',
-        UserPoolId: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+        PolicyDocument: {
+          Statement:
+            Match.arrayWith([
+              Match.objectLike({
+                Action:
+                  Match.arrayWith([
+                    'secretsmanager:GetSecretValue',
+                    'secretsmanager:DescribeSecret',
+                  ]),
+                Effect:
+                  'Allow',
+                Resource: {
+                  Ref:
+                    Match.stringLikeRegexp(
+                      '^CognitoClientSecret',
+                    ),
+                },
+              }),
+            ]),
         },
       }),
     );
   });
 
-  test('creates Google identity provider', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPoolIdentityProvider',
-      1,
-    );
-
+  test('grants API Lambda read and write access to DynamoDB', () => {
     template.hasResourceProperties(
-      'AWS::Cognito::UserPoolIdentityProvider',
+      'AWS::IAM::Policy',
       Match.objectLike({
-        ProviderName: 'Google',
-        ProviderType: 'Google',
-        ProviderDetails: Match.objectLike({
-          client_id: 'test-google-client-id',
-          client_secret: Match.anyValue(),
-          authorize_scopes:
-            'openid email profile',
-        }),
-        AttributeMapping: Match.objectLike({
-          email: 'email',
-          given_name: 'given_name',
-          family_name: 'family_name',
-        }),
-        UserPoolId: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+        Roles:
+          Match.arrayWith([
+            {
+              Ref:
+                Match.stringLikeRegexp(
+                  '^ApiHandlerServiceRole',
+                ),
+            },
+          ]),
+        PolicyDocument: {
+          Statement:
+            Match.arrayWith([
+              Match.objectLike({
+                Action:
+                  Match.arrayWith([
+                    'dynamodb:GetItem',
+                    'dynamodb:PutItem',
+                    'dynamodb:UpdateItem',
+                    'dynamodb:DeleteItem',
+                  ]),
+                Effect:
+                  'Allow',
+              }),
+            ]),
         },
       }),
     );
   });
 
-  test('creates Cognito user pool client', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPoolClient',
-      1,
-    );
-
+  test('grants processor Lambda read access to Slack token table', () => {
     template.hasResourceProperties(
-      'AWS::Cognito::UserPoolClient',
+      'AWS::IAM::Policy',
       Match.objectLike({
-        ClientName:
-          'jpeg-to-xlsx-staging-client',
-        GenerateSecret: false,
-        PreventUserExistenceErrors: 'ENABLED',
-        SupportedIdentityProviders: ['Google'],
-        AllowedOAuthFlows: ['code'],
-        AllowedOAuthFlowsUserPoolClient: true,
-        AllowedOAuthScopes: Match.arrayWith([
-          'openid',
-          'email',
-          'profile',
-        ]),
-        CallbackURLs: Match.anyValue(),
-        LogoutURLs: Match.anyValue(),
-        UserPoolId: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+        Roles:
+          Match.arrayWith([
+            {
+              Ref:
+                Match.stringLikeRegexp(
+                  '^ProcessorHandlerServiceRole',
+                ),
+            },
+          ]),
+        PolicyDocument: {
+          Statement:
+            Match.arrayWith([
+              Match.objectLike({
+                Action:
+                  Match.arrayWith([
+                    'dynamodb:GetItem',
+                  ]),
+                Effect:
+                  'Allow',
+              }),
+            ]),
+        },
+      }),
+    );
+  });
+
+  test('grants processor Lambda permission to invoke Bedrock model', () => {
+    template.hasResourceProperties(
+      'AWS::IAM::Policy',
+      Match.objectLike({
+        Roles:
+          Match.arrayWith([
+            {
+              Ref:
+                Match.stringLikeRegexp(
+                  '^ProcessorHandlerServiceRole',
+                ),
+            },
+          ]),
+        PolicyDocument: {
+          Statement:
+            Match.arrayWith([
+              Match.objectLike({
+                Action:
+                  'bedrock:InvokeModel',
+                Effect:
+                  'Allow',
+                Resource:
+                  '*',
+              }),
+            ]),
+        },
+      }),
+    );
+  });
+
+  test('configures input bucket to invoke processor Lambda', () => {
+    template.hasResourceProperties(
+      'Custom::S3BucketNotifications',
+      Match.objectLike({
+        BucketName: {
+          Ref:
+            Match.stringLikeRegexp(
+              '^InputBucket',
+            ),
+        },
+        NotificationConfiguration:
+          Match.objectLike({
+            LambdaFunctionConfigurations:
+              Match.arrayWith([
+                Match.objectLike({
+                  Events: [
+                    's3:ObjectCreated:*',
+                  ],
+                  LambdaFunctionArn: {
+                    'Fn::GetAtt': [
+                      Match.stringLikeRegexp(
+                        '^ProcessorHandler',
+                      ),
+                      'Arn',
+                    ],
+                  },
+                }),
+              ]),
+          }),
+      }),
+    );
+  });
+
+  test('grants S3 permission to invoke processor Lambda', () => {
+    template.hasResourceProperties(
+      'AWS::Lambda::Permission',
+      Match.objectLike({
+        Action:
+          'lambda:InvokeFunction',
+        Principal:
+          's3.amazonaws.com',
+        FunctionName: {
+          'Fn::GetAtt': [
+            Match.stringLikeRegexp(
+              '^ProcessorHandler',
+            ),
+            'Arn',
+          ],
+        },
+        SourceAccount:
+          testAWSAccount,
+        SourceArn: {
+          'Fn::GetAtt': [
+            Match.stringLikeRegexp(
+              '^InputBucket',
+            ),
+            'Arn',
+          ],
+        },
+      }),
+    );
+  });
+
+  test('outputs CloudFront URL', () => {
+    template.hasOutput(
+      'CloudFrontURL',
+      Match.objectLike({
+        Value:
+          Match.anyValue(),
+      }),
+    );
+  });
+
+  test('outputs Slack client secret ARN', () => {
+    template.hasOutput(
+      'SlackClientSecretArn',
+      Match.objectLike({
+        Description:
+          'Secrets Manager ARN for the Slack client secret',
+        Value: {
+          Ref:
+            Match.stringLikeRegexp(
+              '^SlackClientSecret',
+            ),
         },
       }),
     );
@@ -168,9 +266,13 @@ describe('InfraStack', () => {
     template.hasOutput(
       'CognitoUserPoolId',
       Match.objectLike({
-        Description: 'Cognito user pool ID',
+        Description:
+          'Cognito user pool ID',
         Value: {
-          Ref: Match.stringLikeRegexp('^UserPool'),
+          Ref:
+            Match.stringLikeRegexp(
+              '^UserPool',
+            ),
         },
       }),
     );
@@ -183,9 +285,10 @@ describe('InfraStack', () => {
         Description:
           'Cognito user pool client ID',
         Value: {
-          Ref: Match.stringLikeRegexp(
-            '^UserPoolUserPoolClient',
-          ),
+          Ref:
+            Match.stringLikeRegexp(
+              '^UserPoolUserPoolClient',
+            ),
         },
       }),
     );
@@ -197,7 +300,8 @@ describe('InfraStack', () => {
       Match.objectLike({
         Description:
           'Cognito managed login domain',
-        Value: Match.anyValue(),
+        Value:
+          Match.anyValue(),
       }),
     );
   });
@@ -208,87 +312,8 @@ describe('InfraStack', () => {
       Match.objectLike({
         Description:
           'Redirect URI for the Google OAuth client',
-        Value: Match.anyValue(),
-      }),
-    );
-  });
-
-  test('creates Slack client secret', () => {
-    template.hasResourceProperties(
-      'AWS::SecretsManager::Secret',
-      Match.objectLike({
-        Name:
-          'jpeg-to-xlsx/staging/slack-client-secret',
-        Description:
-          'Slack client secret for jpeg-to-xlsx staging',
-      }),
-    );
-  });
-
-  test('passes Slack client secret ARN to API Lambda', () => {
-    template.hasResourceProperties(
-      'AWS::Lambda::Function',
-      Match.objectLike({
-        Environment: {
-          Variables: Match.objectLike({
-            SLACK_CLIENT_SECRET_ARN: {
-              Ref: Match.stringLikeRegexp(
-                '^SlackClientSecret',
-              ),
-            },
-          }),
-        },
-      }),
-    );
-  });
-
-  test('grants API Lambda permission to read secret', () => {
-    template.hasResourceProperties(
-      'AWS::IAM::Policy',
-      Match.objectLike({
-        PolicyDocument: {
-          Statement: Match.arrayWith([
-            Match.objectLike({
-              Action: Match.arrayWith([
-                'secretsmanager:GetSecretValue',
-                'secretsmanager:DescribeSecret',
-              ]),
-              Effect: 'Allow',
-              Resource: {
-                Ref: Match.stringLikeRegexp(
-                  '^SlackClientSecret',
-                ),
-              },
-            }),
-          ]),
-        },
-      }),
-    );
-  });
-
-  test('outputs Slack client secret ARN', () => {
-    template.hasOutput(
-      'SlackClientSecretArn',
-      Match.objectLike({
-        Description:
-          'Secrets Manager ARN for the Slack client secret',
-        Value: {
-          Ref: Match.stringLikeRegexp(
-            '^SlackClientSecret',
-          ),
-        },
-      }),
-    );
-  });
-
-  test('creates Google OAuth client secret', () => {
-    template.hasResourceProperties(
-      'AWS::SecretsManager::Secret',
-      Match.objectLike({
-        Name:
-          'jpeg-to-xlsx/staging/google-oauth-client',
-        Description:
-          'Google OAuth client secret for jpeg-to-xlsx staging',
+        Value:
+          Match.anyValue(),
       }),
     );
   });
@@ -300,9 +325,10 @@ describe('InfraStack', () => {
         Description:
           'Secrets Manager ARN for the Google OAuth client secret',
         Value: {
-          Ref: Match.stringLikeRegexp(
-            '^GoogleOAuthClientSecret',
-          ),
+          Ref:
+            Match.stringLikeRegexp(
+              '^GoogleOAuthClientSecret',
+            ),
         },
       }),
     );

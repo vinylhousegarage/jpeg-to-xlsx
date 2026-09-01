@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
@@ -22,14 +23,34 @@ export type AuthResources = {
   googleOAuthSecret:
     secretsmanager.Secret;
 
+  cognitoClientSecret:
+    secretsmanager.Secret;
+
+  oauthStateTable:
+    dynamodb.Table;
+
+  sessionTable:
+    dynamodb.Table;
+
   googleRedirectUri: string;
+
+  issuer: string;
+
+  authorizationEndpoint: string;
+
+  tokenEndpoint: string;
+
+  redirectUri: string;
 };
 
 export const createAuthResources = (
   scope: Construct,
   props: AuthResourcesProps,
 ): AuthResources => {
+  const stack = cdk.Stack.of(scope);
+
   // Googleアカウント連携用User Pool
+
   const userPool = new cognito.UserPool(
     scope,
     'UserPool',
@@ -38,12 +59,12 @@ export const createAuthResources = (
         `jpeg-to-xlsx-${props.appEnv}-users`,
       selfSignUpEnabled: false,
       signInCaseSensitive: false,
-      removalPolicy: props.removalPolicy,
+      removalPolicy:
+        props.removalPolicy,
     },
   );
 
   // Cognito Managed Login用Domain
-  const stack = cdk.Stack.of(scope);
 
   const cognitoDomainPrefix =
     `jpeg-to-xlsx-${props.appEnv}-${stack.account}`;
@@ -60,6 +81,7 @@ export const createAuthResources = (
     );
 
   // Google OAuth Client Secret保存用Secret
+
   const googleOAuthSecret =
     new secretsmanager.Secret(
       scope,
@@ -75,6 +97,7 @@ export const createAuthResources = (
     );
 
   // CognitoとGoogle OAuthの連携
+
   const googleProvider =
     new cognito.UserPoolIdentityProviderGoogle(
       scope,
@@ -107,14 +130,20 @@ export const createAuthResources = (
       },
     );
 
+  // Cognito認証後にBFFへ戻るURI
+
+  const redirectUri =
+    `${props.applicationUrl}/api/auth/callback`;
+
   // Cognito User Pool Client
+
   const userPoolClient =
     userPool.addClient(
       'UserPoolClient',
       {
         userPoolClientName:
           `jpeg-to-xlsx-${props.appEnv}-client`,
-        generateSecret: false,
+        generateSecret: true,
         preventUserExistenceErrors: true,
         supportedIdentityProviders: [
           cognito
@@ -131,7 +160,7 @@ export const createAuthResources = (
             cognito.OAuthScope.PROFILE,
           ],
           callbackUrls: [
-            props.applicationUrl,
+            redirectUri,
           ],
           logoutUrls: [
             props.applicationUrl,
@@ -141,18 +170,108 @@ export const createAuthResources = (
     );
 
   // Google IdP作成後にUser Pool Clientを作成
+
   userPoolClient.node.addDependency(
     googleProvider,
   );
 
+  // Cognito App Client Secret保存用Secret
+
+  const cognitoClientSecret =
+    new secretsmanager.Secret(
+      scope,
+      'CognitoClientSecret',
+      {
+        secretName:
+          `jpeg-to-xlsx/${props.appEnv}/cognito-client-secret`,
+        description:
+          `Cognito client secret for jpeg-to-xlsx ${props.appEnv}`,
+        secretObjectValue: {
+          client_secret:
+            userPoolClient
+              .userPoolClientSecret,
+        },
+        removalPolicy:
+          props.removalPolicy,
+      },
+    );
+
+  // Authorization Code Flowで使用するstate・nonce・PKCE verifier保存用テーブル
+
+  const oauthStateTable =
+    new dynamodb.Table(
+      scope,
+      'CognitoOAuthStateTable',
+      {
+        tableName:
+          `jpeg-to-xlsx-${props.appEnv}-cognito-oauth-states`,
+        partitionKey: {
+          name: 'state',
+          type:
+            dynamodb.AttributeType
+              .STRING,
+        },
+        billingMode:
+          dynamodb.BillingMode
+            .PAY_PER_REQUEST,
+        timeToLiveAttribute:
+          'expires_at',
+        removalPolicy:
+          props.removalPolicy,
+      },
+    );
+
+  // BFF認証セッション保存用テーブル
+
+  const sessionTable =
+    new dynamodb.Table(
+      scope,
+      'AuthSessionTable',
+      {
+        tableName:
+          `jpeg-to-xlsx-${props.appEnv}-auth-sessions`,
+        partitionKey: {
+          name: 'id_hash',
+          type:
+            dynamodb.AttributeType
+              .STRING,
+        },
+        billingMode:
+          dynamodb.BillingMode
+            .PAY_PER_REQUEST,
+        timeToLiveAttribute:
+          'expires_at',
+        removalPolicy:
+          props.removalPolicy,
+      },
+    );
+
+  // Cognito関連URI
+
   const googleRedirectUri =
     `${userPoolDomain.baseUrl()}/oauth2/idpresponse`;
+
+  const issuer =
+    `https://cognito-idp.${stack.region}.${stack.urlSuffix}/${userPool.userPoolId}`;
+
+  const authorizationEndpoint =
+    `${userPoolDomain.baseUrl()}/oauth2/authorize`;
+
+  const tokenEndpoint =
+    `${userPoolDomain.baseUrl()}/oauth2/token`;
 
   return {
     userPool,
     userPoolDomain,
     userPoolClient,
     googleOAuthSecret,
+    cognitoClientSecret,
+    oauthStateTable,
+    sessionTable,
     googleRedirectUri,
+    issuer,
+    authorizationEndpoint,
+    tokenEndpoint,
+    redirectUri,
   };
 };

@@ -146,6 +146,7 @@ jobs:
       - name: CDK Synth
         env: &staging-env
           APP_ENV: staging
+          APPLICATION_URL: ${{ vars.APPLICATION_URL }}
           BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           PROMPT_FILE_NAME: ${{ vars.PROMPT_FILE_NAME }}
