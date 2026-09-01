@@ -19,7 +19,8 @@ export const createStorageResources = (
   scope: Construct,
   props: StorageResourcesProps,
 ): StorageResources => {
-  // Inputバケット（画像アップロード用：1日で自動削除）
+  // Inputバケット
+  // （画像アップロード用：1日で自動削除）
   const inputBucket =
     new s3.Bucket(
       scope,
@@ -47,7 +48,8 @@ export const createStorageResources = (
       },
     );
 
-  // Outputバケット（生成したXLSX保存用：1日で自動削除）
+  // Outputバケット
+  // （生成したXLSX保存用：1日で自動削除）
   const outputBucket =
     new s3.Bucket(
       scope,

@@ -95,7 +95,8 @@ export class InfraStack extends cdk.Stack {
         },
       );
 
-    // 3. Lambda関数の作成（Goランタイム）
+    // 3. Lambda関数の作成
+    // （Goランタイム）
 
     const computeResources =
       createComputeResources(
@@ -163,7 +164,8 @@ export class InfraStack extends cdk.Stack {
           .processorHandler,
       );
 
-    // Processor HandlerにBedrockの実行権限を付与
+    // Processor Handlerに
+    // Bedrockの実行権限を付与
 
     computeResources.processorHandler
       .addToRolePolicy(
@@ -175,7 +177,8 @@ export class InfraStack extends cdk.Stack {
         }),
       );
 
-    // Inputバケットへの画像保存時にProcessor Handlerを起動
+    // Inputバケットへの画像保存時に
+    // Processor Handlerを起動
 
     storageResources.inputBucket
       .addEventNotification(
@@ -186,7 +189,8 @@ export class InfraStack extends cdk.Stack {
         ),
       );
 
-    // 5. 配信リソースの作成（API Gateway・CloudFront・Frontend）
+    // 5. 配信リソースの作成
+    // （API Gateway・CloudFront・Frontend）
 
     const deliveryResources =
       createDeliveryResources(
