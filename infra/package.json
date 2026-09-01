@@ -6,7 +6,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "lint": "eslint \"{bin,lib}/**/*.ts\""
+    "lint": "eslint \"{bin,lib,test}/**/*.ts\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

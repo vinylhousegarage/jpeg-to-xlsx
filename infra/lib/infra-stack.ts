@@ -46,6 +46,10 @@ export class InfraStack extends cdk.Stack {
       'APP_ENV',
     );
 
+    const applicationUrl = requireEnv(
+      'APPLICATION_URL',
+    );
+
     const bedrockModelId = requireEnv(
       'BEDROCK_MODEL_ID',
     );
@@ -95,7 +99,20 @@ export class InfraStack extends cdk.Stack {
         },
       );
 
-    // 3. Lambda関数の作成
+    // 3. Cognito認証リソースの作成
+
+    const authResources =
+      createAuthResources(
+        this,
+        {
+          appEnv,
+          applicationUrl,
+          googleClientId,
+          removalPolicy,
+        },
+      );
+
+    // 4. Lambda関数の作成
     // （Goランタイム）
 
     const computeResources =
@@ -107,30 +124,73 @@ export class InfraStack extends cdk.Stack {
           promptFileName,
           slackClientId,
           slackRedirectUri,
+
           inputBucket:
             storageResources
               .inputBucket,
+
           outputBucket:
             storageResources
               .outputBucket,
+
           slackSecret:
             slackResources
               .slackSecret,
+
           slackTokenTable:
             slackResources
               .slackTokenTable,
+
+          cognitoClientId:
+            authResources
+              .userPoolClient
+              .userPoolClientId,
+
+          cognitoClientSecretArn:
+            authResources
+              .cognitoClientSecret
+              .secretArn,
+
+          cognitoIssuer:
+            authResources.issuer,
+
+          cognitoAuthorizationEndpoint:
+            authResources
+              .authorizationEndpoint,
+
+          cognitoTokenEndpoint:
+            authResources
+              .tokenEndpoint,
+
+          cognitoRedirectUri:
+            authResources.redirectUri,
+
+          postLoginRedirectUrl:
+            applicationUrl,
+
+          oauthStateTableName:
+            authResources
+              .oauthStateTable
+              .tableName,
+
+          sessionTableName:
+            authResources
+              .sessionTable
+              .tableName,
         },
       );
 
-    // 4. IAM権限とイベントトリガー
+    // 5. IAM権限とイベントトリガー
 
-    // API Handlerの権限
+    // API HandlerのS3権限
 
     storageResources.inputBucket
       .grantWrite(
         computeResources
           .apiHandler,
       );
+
+    // API HandlerのSlack権限
 
     slackResources.slackTokenTable
       .grantReadWriteData(
@@ -140,6 +200,26 @@ export class InfraStack extends cdk.Stack {
 
     slackResources.slackSecret
       .grantRead(
+        computeResources
+          .apiHandler,
+      );
+
+    // API Handlerの認証権限
+
+    authResources.cognitoClientSecret
+      .grantRead(
+        computeResources
+          .apiHandler,
+      );
+
+    authResources.oauthStateTable
+      .grantReadWriteData(
+        computeResources
+          .apiHandler,
+      );
+
+    authResources.sessionTable
+      .grantReadWriteData(
         computeResources
           .apiHandler,
       );
@@ -164,8 +244,7 @@ export class InfraStack extends cdk.Stack {
           .processorHandler,
       );
 
-    // Processor Handlerに
-    // Bedrockの実行権限を付与
+    // Processor HandlerにBedrockの実行権限を付与
 
     computeResources.processorHandler
       .addToRolePolicy(
@@ -177,8 +256,7 @@ export class InfraStack extends cdk.Stack {
         }),
       );
 
-    // Inputバケットへの画像保存時に
-    // Processor Handlerを起動
+    // Inputバケットへの画像保存時にProcessor Handlerを起動
 
     storageResources.inputBucket
       .addEventNotification(
@@ -189,8 +267,7 @@ export class InfraStack extends cdk.Stack {
         ),
       );
 
-    // 5. 配信リソースの作成
-    // （API Gateway・CloudFront・Frontend）
+    // 6. 配信リソースの作成（API Gateway・CloudFront・Frontend）
 
     const deliveryResources =
       createDeliveryResources(
@@ -199,24 +276,10 @@ export class InfraStack extends cdk.Stack {
           apiHandler:
             computeResources
               .apiHandler,
+
           websiteBucket:
             storageResources
               .websiteBucket,
-        },
-      );
-
-    // 6. Cognito認証リソースの作成
-
-    const authResources =
-      createAuthResources(
-        this,
-        {
-          appEnv,
-          applicationUrl:
-            deliveryResources
-              .applicationUrl,
-          googleClientId,
-          removalPolicy,
         },
       );
 
