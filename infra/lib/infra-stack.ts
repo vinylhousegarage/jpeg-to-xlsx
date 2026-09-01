@@ -1,22 +1,24 @@
 import * as cdk from 'aws-cdk-lib';
-import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
-import {
-  HttpLambdaIntegration,
-} from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 import {
   createAuthResources,
 } from './constructs/auth-resources';
+import {
+  createComputeResources,
+} from './constructs/compute-resources';
+import {
+  createDeliveryResources,
+} from './constructs/delivery-resources';
+import {
+  createSlackResources,
+} from './constructs/slack-resources';
+import {
+  createStorageResources,
+} from './constructs/storage-resources';
 
 function requireEnv(
   name: string,
@@ -65,6 +67,7 @@ export class InfraStack extends cdk.Stack {
     );
 
     // リソース削除設定
+
     const removalPolicy =
       cdk.RemovalPolicy.DESTROY;
 
@@ -72,376 +75,160 @@ export class InfraStack extends cdk.Stack {
 
     // 1. Slackリソースの作成
 
-    // Slack Client Secret保存用Secret
-    const slackSecret =
-      new secretsmanager.Secret(
+    const slackResources =
+      createSlackResources(
         this,
-        'SlackClientSecret',
         {
-          secretName:
-            `jpeg-to-xlsx/${appEnv}/slack-client-secret`,
-          description:
-            `Slack client secret for jpeg-to-xlsx ${appEnv}`,
+          appEnv,
           removalPolicy,
         },
       );
 
-    // Slack OAuthトークン保存用テーブル
-    const slackTokenTable =
-      new dynamodb.Table(
-        this,
-        'SlackTokenTable',
-        {
-          partitionKey: {
-            name: 'id',
-            type:
-              dynamodb.AttributeType.STRING,
-          },
-          removalPolicy,
-        },
-      );
+    // 2. S3リソースの作成
 
-    // 2. S3バケットの作成
-
-    // Inputバケット
-    // （画像アップロード用：1日で自動削除）
-    const inputBucket =
-      new s3.Bucket(
+    const storageResources =
+      createStorageResources(
         this,
-        'InputBucket',
         {
           removalPolicy,
           autoDeleteObjects,
-          lifecycleRules: [
-            {
-              expiration:
-                cdk.Duration.days(1),
-            },
-          ],
-          cors: [
-            {
-              allowedMethods: [
-                s3.HttpMethods.PUT,
-              ],
-              allowedOrigins: ['*'],
-              allowedHeaders: ['*'],
-            },
-          ],
-        },
-      );
-
-    // Outputバケット
-    // （生成したXLSX保存用：1日で自動削除）
-    const outputBucket =
-      new s3.Bucket(
-        this,
-        'OutputBucket',
-        {
-          removalPolicy,
-          autoDeleteObjects,
-          lifecycleRules: [
-            {
-              expiration:
-                cdk.Duration.days(1),
-            },
-          ],
-        },
-      );
-
-    // Websiteバケット
-    const websiteBucket =
-      new s3.Bucket(
-        this,
-        'WebsiteBucket',
-        {
-          removalPolicy,
-          autoDeleteObjects,
-          blockPublicAccess:
-            s3.BlockPublicAccess
-              .BLOCK_ALL,
         },
       );
 
     // 3. Lambda関数の作成
     // （Goランタイム）
 
-    // API Handler
-    const apiHandler =
-      new lambda.Function(
+    const computeResources =
+      createComputeResources(
         this,
-        'ApiHandler',
         {
-          runtime:
-            lambda.Runtime
-              .PROVIDED_AL2023,
-          handler: 'bootstrap',
-          architecture:
-            lambda.Architecture
-              .ARM_64,
-          code:
-            lambda.Code.fromAsset(
-              '../backend/bin/api',
-            ),
-          timeout:
-            cdk.Duration.seconds(15),
-          environment: {
-            APP_ENV:
-              appEnv,
-            INPUT_BUCKET_NAME:
-              inputBucket.bucketName,
-            SLACK_CLIENT_ID:
-              slackClientId,
-            SLACK_CLIENT_SECRET_ARN:
-              slackSecret.secretArn,
-            SLACK_REDIRECT_URI:
-              slackRedirectUri,
-            SLACK_TOKEN_TABLE_NAME:
-              slackTokenTable.tableName,
-          },
-        },
-      );
-
-    // Processor Handler
-    // （Bedrock解析・XLSX生成・Slack通知）
-    const processorHandler =
-      new lambda.Function(
-        this,
-        'ProcessorHandler',
-        {
-          runtime:
-            lambda.Runtime
-              .PROVIDED_AL2023,
-          handler: 'bootstrap',
-          architecture:
-            lambda.Architecture
-              .ARM_64,
-          code:
-            lambda.Code.fromAsset(
-              '../backend/bin/processor',
-            ),
-          timeout:
-            cdk.Duration.seconds(30),
-          environment: {
-            APP_ENV:
-              appEnv,
-            INPUT_BUCKET_NAME:
-              inputBucket.bucketName,
-            OUTPUT_BUCKET_NAME:
-              outputBucket.bucketName,
-            BEDROCK_MODEL_ID:
-              bedrockModelId,
-            PROMPT_FILE_NAME:
-              promptFileName,
-            SLACK_TOKEN_TABLE_NAME:
-              slackTokenTable.tableName,
-          },
+          appEnv,
+          bedrockModelId,
+          promptFileName,
+          slackClientId,
+          slackRedirectUri,
+          inputBucket:
+            storageResources
+              .inputBucket,
+          outputBucket:
+            storageResources
+              .outputBucket,
+          slackSecret:
+            slackResources
+              .slackSecret,
+          slackTokenTable:
+            slackResources
+              .slackTokenTable,
         },
       );
 
     // 4. IAM権限とイベントトリガー
 
     // API Handlerの権限
-    inputBucket.grantWrite(
-      apiHandler,
-    );
 
-    slackTokenTable.grantReadWriteData(
-      apiHandler,
-    );
+    storageResources.inputBucket
+      .grantWrite(
+        computeResources
+          .apiHandler,
+      );
 
-    slackSecret.grantRead(
-      apiHandler,
-    );
+    slackResources.slackTokenTable
+      .grantReadWriteData(
+        computeResources
+          .apiHandler,
+      );
+
+    slackResources.slackSecret
+      .grantRead(
+        computeResources
+          .apiHandler,
+      );
 
     // Processor Handlerの権限
-    inputBucket.grantRead(
-      processorHandler,
-    );
 
-    outputBucket.grantReadWrite(
-      processorHandler,
-    );
+    storageResources.inputBucket
+      .grantRead(
+        computeResources
+          .processorHandler,
+      );
 
-    slackTokenTable.grantReadData(
-      processorHandler,
-    );
+    storageResources.outputBucket
+      .grantReadWrite(
+        computeResources
+          .processorHandler,
+      );
+
+    slackResources.slackTokenTable
+      .grantReadData(
+        computeResources
+          .processorHandler,
+      );
 
     // Processor Handlerに
     // Bedrockの実行権限を付与
-    processorHandler.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: [
-          'bedrock:InvokeModel',
-        ],
-        resources: ['*'],
-      }),
-    );
+
+    computeResources.processorHandler
+      .addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: [
+            'bedrock:InvokeModel',
+          ],
+          resources: ['*'],
+        }),
+      );
 
     // Inputバケットへの画像保存時に
     // Processor Handlerを起動
-    inputBucket.addEventNotification(
-      s3.EventType.OBJECT_CREATED,
-      new s3n.LambdaDestination(
-        processorHandler,
-      ),
-    );
 
-    // 5. API Gatewayの構築
-    // （HTTP API）
-
-    const api = new apigwv2.HttpApi(
-      this,
-      'JpegToXlsxHttpApi',
-      {
-        apiName:
-          'Jpeg To Xlsx HTTP API',
-        corsPreflight: {
-          allowOrigins: ['*'],
-          allowMethods: [
-            apigwv2
-              .CorsHttpMethod
-              .ANY,
-          ],
-          allowHeaders: ['*'],
-        },
-      },
-    );
-
-    const apiIntegration =
-      new HttpLambdaIntegration(
-        'ApiIntegration',
-        apiHandler,
+    storageResources.inputBucket
+      .addEventNotification(
+        s3.EventType.OBJECT_CREATED,
+        new s3n.LambdaDestination(
+          computeResources
+            .processorHandler,
+        ),
       );
 
-    api.addRoutes({
-      path:
-        '/api/storage/upload',
-      methods: [
-        apigwv2.HttpMethod.POST,
-      ],
-      integration:
-        apiIntegration,
-    });
+    // 5. 配信リソースの作成
+    // （API Gateway・CloudFront・Frontend）
 
-    api.addRoutes({
-      path:
-        '/api/oauth/slack/login',
-      methods: [
-        apigwv2.HttpMethod.GET,
-      ],
-      integration:
-        apiIntegration,
-    });
-
-    api.addRoutes({
-      path:
-        '/api/oauth/slack/callback',
-      methods: [
-        apigwv2.HttpMethod.GET,
-      ],
-      integration:
-        apiIntegration,
-    });
-
-    // 6. CloudFrontの作成
-
-    const apiOrigin =
-      new origins.HttpOrigin(
-        `${api.apiId}.execute-api.${this.region}.amazonaws.com`,
-        {
-          protocolPolicy:
-            cloudfront
-              .OriginProtocolPolicy
-              .HTTPS_ONLY,
-        },
-      );
-
-    const distribution =
-      new cloudfront.Distribution(
+    const deliveryResources =
+      createDeliveryResources(
         this,
-        'WebsiteDistribution',
         {
-          defaultBehavior: {
-            origin:
-              origins
-                .S3BucketOrigin
-                .withOriginAccessControl(
-                  websiteBucket,
-                ),
-            viewerProtocolPolicy:
-              cloudfront
-                .ViewerProtocolPolicy
-                .REDIRECT_TO_HTTPS,
-          },
-          additionalBehaviors: {
-            '/api/*': {
-              origin:
-                apiOrigin,
-              viewerProtocolPolicy:
-                cloudfront
-                  .ViewerProtocolPolicy
-                  .REDIRECT_TO_HTTPS,
-              allowedMethods:
-                cloudfront
-                  .AllowedMethods
-                  .ALLOW_ALL,
-              cachePolicy:
-                cloudfront
-                  .CachePolicy
-                  .CACHING_DISABLED,
-              originRequestPolicy:
-                cloudfront
-                  .OriginRequestPolicy
-                  .ALL_VIEWER_EXCEPT_HOST_HEADER,
-            },
-          },
-          defaultRootObject:
-            'index.html',
+          apiHandler:
+            computeResources
+              .apiHandler,
+          websiteBucket:
+            storageResources
+              .websiteBucket,
         },
       );
 
-    const applicationUrl =
-      `https://${distribution.distributionDomainName}`;
-
-    // 7. Cognito認証リソースの作成
+    // 6. Cognito認証リソースの作成
 
     const authResources =
       createAuthResources(
         this,
         {
           appEnv,
-          applicationUrl,
+          applicationUrl:
+            deliveryResources
+              .applicationUrl,
           googleClientId,
           removalPolicy,
         },
       );
 
-    // 8. Frontendのデプロイ
-
-    new s3deploy.BucketDeployment(
-      this,
-      'DeployWebsite',
-      {
-        sources: [
-          s3deploy.Source.asset(
-            '../frontend/dist',
-          ),
-        ],
-        destinationBucket:
-          websiteBucket,
-        distribution,
-        distributionPaths: ['/*'],
-      },
-    );
-
-    // 9. Outputs
+    // 7. Outputs
 
     new cdk.CfnOutput(
       this,
       'CloudFrontURL',
       {
         value:
-          applicationUrl,
+          deliveryResources
+            .applicationUrl,
       },
     );
 
@@ -450,7 +237,9 @@ export class InfraStack extends cdk.Stack {
       'SlackClientSecretArn',
       {
         value:
-          slackSecret.secretArn,
+          slackResources
+            .slackSecret
+            .secretArn,
         description:
           'Secrets Manager ARN for the Slack client secret',
       },
