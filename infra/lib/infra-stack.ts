@@ -6,7 +6,6 @@ import {
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
@@ -15,6 +14,9 @@ import { Construct } from 'constructs';
 import {
   createAuthResources,
 } from './constructs/auth-resources';
+import {
+  createComputeResources,
+} from './constructs/compute-resources';
 import {
   createSlackResources,
 } from './constructs/slack-resources';
@@ -99,88 +101,27 @@ export class InfraStack extends cdk.Stack {
     // 3. Lambda関数の作成
     // （Goランタイム）
 
-    // API Handler
-    const apiHandler =
-      new lambda.Function(
+    const computeResources =
+      createComputeResources(
         this,
-        'ApiHandler',
         {
-          runtime:
-            lambda.Runtime
-              .PROVIDED_AL2023,
-          handler: 'bootstrap',
-          architecture:
-            lambda.Architecture
-              .ARM_64,
-          code:
-            lambda.Code.fromAsset(
-              '../backend/bin/api',
-            ),
-          timeout:
-            cdk.Duration.seconds(15),
-          environment: {
-            APP_ENV:
-              appEnv,
-            INPUT_BUCKET_NAME:
-              storageResources
-                .inputBucket
-                .bucketName,
-            SLACK_CLIENT_ID:
-              slackClientId,
-            SLACK_CLIENT_SECRET_ARN:
-              slackResources
-                .slackSecret
-                .secretArn,
-            SLACK_REDIRECT_URI:
-              slackRedirectUri,
-            SLACK_TOKEN_TABLE_NAME:
-              slackResources
-                .slackTokenTable
-                .tableName,
-          },
-        },
-      );
-
-    // Processor Handler
-    // （Bedrock解析・XLSX生成・Slack通知）
-    const processorHandler =
-      new lambda.Function(
-        this,
-        'ProcessorHandler',
-        {
-          runtime:
-            lambda.Runtime
-              .PROVIDED_AL2023,
-          handler: 'bootstrap',
-          architecture:
-            lambda.Architecture
-              .ARM_64,
-          code:
-            lambda.Code.fromAsset(
-              '../backend/bin/processor',
-            ),
-          timeout:
-            cdk.Duration.seconds(30),
-          environment: {
-            APP_ENV:
-              appEnv,
-            INPUT_BUCKET_NAME:
-              storageResources
-                .inputBucket
-                .bucketName,
-            OUTPUT_BUCKET_NAME:
-              storageResources
-                .outputBucket
-                .bucketName,
-            BEDROCK_MODEL_ID:
-              bedrockModelId,
-            PROMPT_FILE_NAME:
-              promptFileName,
-            SLACK_TOKEN_TABLE_NAME:
-              slackResources
-                .slackTokenTable
-                .tableName,
-          },
+          appEnv,
+          bedrockModelId,
+          promptFileName,
+          slackClientId,
+          slackRedirectUri,
+          inputBucket:
+            storageResources
+              .inputBucket,
+          outputBucket:
+            storageResources
+              .outputBucket,
+          slackSecret:
+            slackResources
+              .slackSecret,
+          slackTokenTable:
+            slackResources
+              .slackTokenTable,
         },
       );
 
@@ -189,45 +130,52 @@ export class InfraStack extends cdk.Stack {
     // API Handlerの権限
     storageResources.inputBucket
       .grantWrite(
-        apiHandler,
+        computeResources
+          .apiHandler,
       );
 
     slackResources.slackTokenTable
       .grantReadWriteData(
-        apiHandler,
+        computeResources
+          .apiHandler,
       );
 
     slackResources.slackSecret
       .grantRead(
-        apiHandler,
+        computeResources
+          .apiHandler,
       );
 
     // Processor Handlerの権限
     storageResources.inputBucket
       .grantRead(
-        processorHandler,
+        computeResources
+          .processorHandler,
       );
 
     storageResources.outputBucket
       .grantReadWrite(
-        processorHandler,
+        computeResources
+          .processorHandler,
       );
 
     slackResources.slackTokenTable
       .grantReadData(
-        processorHandler,
+        computeResources
+          .processorHandler,
       );
 
     // Processor Handlerに
     // Bedrockの実行権限を付与
-    processorHandler.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: [
-          'bedrock:InvokeModel',
-        ],
-        resources: ['*'],
-      }),
-    );
+    computeResources.processorHandler
+      .addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: [
+            'bedrock:InvokeModel',
+          ],
+          resources: ['*'],
+        }),
+      );
 
     // Inputバケットへの画像保存時に
     // Processor Handlerを起動
@@ -235,7 +183,8 @@ export class InfraStack extends cdk.Stack {
       .addEventNotification(
         s3.EventType.OBJECT_CREATED,
         new s3n.LambdaDestination(
-          processorHandler,
+          computeResources
+            .processorHandler,
         ),
       );
 
@@ -263,7 +212,8 @@ export class InfraStack extends cdk.Stack {
     const apiIntegration =
       new HttpLambdaIntegration(
         'ApiIntegration',
-        apiHandler,
+        computeResources
+          .apiHandler,
       );
 
     api.addRoutes({
