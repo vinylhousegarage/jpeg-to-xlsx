@@ -18,6 +18,9 @@ import {
 import {
   createSlackResources,
 } from './constructs/slack-resources';
+import {
+  createStorageResources,
+} from './constructs/storage-resources';
 
 function requireEnv(
   name: string,
@@ -82,64 +85,14 @@ export class InfraStack extends cdk.Stack {
         },
       );
 
-    // 2. S3バケットの作成
+    // 2. S3リソースの作成
 
-    // Inputバケット
-    // （画像アップロード用：1日で自動削除）
-    const inputBucket =
-      new s3.Bucket(
+    const storageResources =
+      createStorageResources(
         this,
-        'InputBucket',
         {
           removalPolicy,
           autoDeleteObjects,
-          lifecycleRules: [
-            {
-              expiration:
-                cdk.Duration.days(1),
-            },
-          ],
-          cors: [
-            {
-              allowedMethods: [
-                s3.HttpMethods.PUT,
-              ],
-              allowedOrigins: ['*'],
-              allowedHeaders: ['*'],
-            },
-          ],
-        },
-      );
-
-    // Outputバケット
-    // （生成したXLSX保存用：1日で自動削除）
-    const outputBucket =
-      new s3.Bucket(
-        this,
-        'OutputBucket',
-        {
-          removalPolicy,
-          autoDeleteObjects,
-          lifecycleRules: [
-            {
-              expiration:
-                cdk.Duration.days(1),
-            },
-          ],
-        },
-      );
-
-    // Websiteバケット
-    const websiteBucket =
-      new s3.Bucket(
-        this,
-        'WebsiteBucket',
-        {
-          removalPolicy,
-          autoDeleteObjects,
-          blockPublicAccess:
-            s3.BlockPublicAccess
-              .BLOCK_ALL,
         },
       );
 
@@ -169,7 +122,9 @@ export class InfraStack extends cdk.Stack {
             APP_ENV:
               appEnv,
             INPUT_BUCKET_NAME:
-              inputBucket.bucketName,
+              storageResources
+                .inputBucket
+                .bucketName,
             SLACK_CLIENT_ID:
               slackClientId,
             SLACK_CLIENT_SECRET_ARN:
@@ -210,9 +165,13 @@ export class InfraStack extends cdk.Stack {
             APP_ENV:
               appEnv,
             INPUT_BUCKET_NAME:
-              inputBucket.bucketName,
+              storageResources
+                .inputBucket
+                .bucketName,
             OUTPUT_BUCKET_NAME:
-              outputBucket.bucketName,
+              storageResources
+                .outputBucket
+                .bucketName,
             BEDROCK_MODEL_ID:
               bedrockModelId,
             PROMPT_FILE_NAME:
@@ -228,9 +187,10 @@ export class InfraStack extends cdk.Stack {
     // 4. IAM権限とイベントトリガー
 
     // API Handlerの権限
-    inputBucket.grantWrite(
-      apiHandler,
-    );
+    storageResources.inputBucket
+      .grantWrite(
+        apiHandler,
+      );
 
     slackResources.slackTokenTable
       .grantReadWriteData(
@@ -243,13 +203,15 @@ export class InfraStack extends cdk.Stack {
       );
 
     // Processor Handlerの権限
-    inputBucket.grantRead(
-      processorHandler,
-    );
+    storageResources.inputBucket
+      .grantRead(
+        processorHandler,
+      );
 
-    outputBucket.grantReadWrite(
-      processorHandler,
-    );
+    storageResources.outputBucket
+      .grantReadWrite(
+        processorHandler,
+      );
 
     slackResources.slackTokenTable
       .grantReadData(
@@ -269,12 +231,13 @@ export class InfraStack extends cdk.Stack {
 
     // Inputバケットへの画像保存時に
     // Processor Handlerを起動
-    inputBucket.addEventNotification(
-      s3.EventType.OBJECT_CREATED,
-      new s3n.LambdaDestination(
-        processorHandler,
-      ),
-    );
+    storageResources.inputBucket
+      .addEventNotification(
+        s3.EventType.OBJECT_CREATED,
+        new s3n.LambdaDestination(
+          processorHandler,
+        ),
+      );
 
     // 5. API Gatewayの構築
     // （HTTP API）
@@ -356,7 +319,8 @@ export class InfraStack extends cdk.Stack {
               origins
                 .S3BucketOrigin
                 .withOriginAccessControl(
-                  websiteBucket,
+                  storageResources
+                    .websiteBucket,
                 ),
             viewerProtocolPolicy:
               cloudfront
@@ -418,7 +382,8 @@ export class InfraStack extends cdk.Stack {
           ),
         ],
         destinationBucket:
-          websiteBucket,
+          storageResources
+            .websiteBucket,
         distribution,
         distributionPaths: ['/*'],
       },
