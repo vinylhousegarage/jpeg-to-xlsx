@@ -5,18 +5,19 @@ import {
 } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 import {
   createAuthResources,
 } from './constructs/auth-resources';
+import {
+  createSlackResources,
+} from './constructs/slack-resources';
 
 function requireEnv(
   name: string,
@@ -72,31 +73,11 @@ export class InfraStack extends cdk.Stack {
 
     // 1. Slackリソースの作成
 
-    // Slack Client Secret保存用Secret
-    const slackSecret =
-      new secretsmanager.Secret(
+    const slackResources =
+      createSlackResources(
         this,
-        'SlackClientSecret',
         {
-          secretName:
-            `jpeg-to-xlsx/${appEnv}/slack-client-secret`,
-          description:
-            `Slack client secret for jpeg-to-xlsx ${appEnv}`,
-          removalPolicy,
-        },
-      );
-
-    // Slack OAuthトークン保存用テーブル
-    const slackTokenTable =
-      new dynamodb.Table(
-        this,
-        'SlackTokenTable',
-        {
-          partitionKey: {
-            name: 'id',
-            type:
-              dynamodb.AttributeType.STRING,
-          },
+          appEnv,
           removalPolicy,
         },
       );
@@ -192,11 +173,15 @@ export class InfraStack extends cdk.Stack {
             SLACK_CLIENT_ID:
               slackClientId,
             SLACK_CLIENT_SECRET_ARN:
-              slackSecret.secretArn,
+              slackResources
+                .slackSecret
+                .secretArn,
             SLACK_REDIRECT_URI:
               slackRedirectUri,
             SLACK_TOKEN_TABLE_NAME:
-              slackTokenTable.tableName,
+              slackResources
+                .slackTokenTable
+                .tableName,
           },
         },
       );
@@ -233,7 +218,9 @@ export class InfraStack extends cdk.Stack {
             PROMPT_FILE_NAME:
               promptFileName,
             SLACK_TOKEN_TABLE_NAME:
-              slackTokenTable.tableName,
+              slackResources
+                .slackTokenTable
+                .tableName,
           },
         },
       );
@@ -245,13 +232,15 @@ export class InfraStack extends cdk.Stack {
       apiHandler,
     );
 
-    slackTokenTable.grantReadWriteData(
-      apiHandler,
-    );
+    slackResources.slackTokenTable
+      .grantReadWriteData(
+        apiHandler,
+      );
 
-    slackSecret.grantRead(
-      apiHandler,
-    );
+    slackResources.slackSecret
+      .grantRead(
+        apiHandler,
+      );
 
     // Processor Handlerの権限
     inputBucket.grantRead(
@@ -262,9 +251,10 @@ export class InfraStack extends cdk.Stack {
       processorHandler,
     );
 
-    slackTokenTable.grantReadData(
-      processorHandler,
-    );
+    slackResources.slackTokenTable
+      .grantReadData(
+        processorHandler,
+      );
 
     // Processor Handlerに
     // Bedrockの実行権限を付与
@@ -450,7 +440,9 @@ export class InfraStack extends cdk.Stack {
       'SlackClientSecretArn',
       {
         value:
-          slackSecret.secretArn,
+          slackResources
+            .slackSecret
+            .secretArn,
         description:
           'Secrets Manager ARN for the Slack client secret',
       },
