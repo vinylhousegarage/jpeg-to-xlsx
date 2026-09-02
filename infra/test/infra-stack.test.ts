@@ -16,8 +16,7 @@ describe('InfraStack', () => {
   beforeAll(() => {
     setTestEnvironment();
 
-    template =
-      createInfraStackTemplate();
+    template = createInfraStackTemplate();
   });
 
   afterAll(() => {
@@ -28,25 +27,20 @@ describe('InfraStack', () => {
     template.hasResourceProperties(
       'AWS::IAM::Policy',
       Match.objectLike({
+        Roles: Match.arrayWith([
+          { Ref: Match.stringLikeRegexp('^ApiHandlerServiceRole') },
+        ]),
         PolicyDocument: {
-          Statement:
-            Match.arrayWith([
-              Match.objectLike({
-                Action:
-                  Match.arrayWith([
-                    'secretsmanager:GetSecretValue',
-                    'secretsmanager:DescribeSecret',
-                  ]),
-                Effect:
-                  'Allow',
-                Resource: {
-                  Ref:
-                    Match.stringLikeRegexp(
-                      '^SlackClientSecret',
-                    ),
-                },
-              }),
-            ]),
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith([
+                'secretsmanager:GetSecretValue',
+                'secretsmanager:DescribeSecret',
+              ]),
+              Effect: 'Allow',
+              Resource: { Ref: Match.stringLikeRegexp('^SlackClientSecret') },
+            }),
+          ]),
         },
       }),
     );
@@ -56,25 +50,20 @@ describe('InfraStack', () => {
     template.hasResourceProperties(
       'AWS::IAM::Policy',
       Match.objectLike({
+        Roles: Match.arrayWith([
+          { Ref: Match.stringLikeRegexp('^ApiHandlerServiceRole') },
+        ]),
         PolicyDocument: {
-          Statement:
-            Match.arrayWith([
-              Match.objectLike({
-                Action:
-                  Match.arrayWith([
-                    'secretsmanager:GetSecretValue',
-                    'secretsmanager:DescribeSecret',
-                  ]),
-                Effect:
-                  'Allow',
-                Resource: {
-                  Ref:
-                    Match.stringLikeRegexp(
-                      '^CognitoClientSecret',
-                    ),
-                },
-              }),
-            ]),
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith([
+                'secretsmanager:GetSecretValue',
+                'secretsmanager:DescribeSecret',
+              ]),
+              Effect: 'Allow',
+              Resource: { Ref: Match.stringLikeRegexp('^CognitoClientSecret') },
+            }),
+          ]),
         },
       }),
     );
@@ -84,30 +73,21 @@ describe('InfraStack', () => {
     template.hasResourceProperties(
       'AWS::IAM::Policy',
       Match.objectLike({
-        Roles:
-          Match.arrayWith([
-            {
-              Ref:
-                Match.stringLikeRegexp(
-                  '^ApiHandlerServiceRole',
-                ),
-            },
-          ]),
+        Roles: Match.arrayWith([
+          { Ref: Match.stringLikeRegexp('^ApiHandlerServiceRole') },
+        ]),
         PolicyDocument: {
-          Statement:
-            Match.arrayWith([
-              Match.objectLike({
-                Action:
-                  Match.arrayWith([
-                    'dynamodb:GetItem',
-                    'dynamodb:PutItem',
-                    'dynamodb:UpdateItem',
-                    'dynamodb:DeleteItem',
-                  ]),
-                Effect:
-                  'Allow',
-              }),
-            ]),
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith([
+                'dynamodb:GetItem',
+                'dynamodb:PutItem',
+                'dynamodb:UpdateItem',
+                'dynamodb:DeleteItem',
+              ]),
+              Effect: 'Allow',
+            }),
+          ]),
         },
       }),
     );
@@ -117,27 +97,16 @@ describe('InfraStack', () => {
     template.hasResourceProperties(
       'AWS::IAM::Policy',
       Match.objectLike({
-        Roles:
-          Match.arrayWith([
-            {
-              Ref:
-                Match.stringLikeRegexp(
-                  '^ProcessorHandlerServiceRole',
-                ),
-            },
-          ]),
+        Roles: Match.arrayWith([
+          { Ref: Match.stringLikeRegexp('^ProcessorHandlerServiceRole') },
+        ]),
         PolicyDocument: {
-          Statement:
-            Match.arrayWith([
-              Match.objectLike({
-                Action:
-                  Match.arrayWith([
-                    'dynamodb:GetItem',
-                  ]),
-                Effect:
-                  'Allow',
-              }),
-            ]),
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith(['dynamodb:GetItem']),
+              Effect: 'Allow',
+            }),
+          ]),
         },
       }),
     );
@@ -147,27 +116,17 @@ describe('InfraStack', () => {
     template.hasResourceProperties(
       'AWS::IAM::Policy',
       Match.objectLike({
-        Roles:
-          Match.arrayWith([
-            {
-              Ref:
-                Match.stringLikeRegexp(
-                  '^ProcessorHandlerServiceRole',
-                ),
-            },
-          ]),
+        Roles: Match.arrayWith([
+          { Ref: Match.stringLikeRegexp('^ProcessorHandlerServiceRole') },
+        ]),
         PolicyDocument: {
-          Statement:
-            Match.arrayWith([
-              Match.objectLike({
-                Action:
-                  'bedrock:InvokeModel',
-                Effect:
-                  'Allow',
-                Resource:
-                  '*',
-              }),
-            ]),
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'bedrock:InvokeModel',
+              Effect: 'Allow',
+              Resource: '*',
+            }),
+          ]),
         },
       }),
     );
@@ -178,30 +137,21 @@ describe('InfraStack', () => {
       'Custom::S3BucketNotifications',
       Match.objectLike({
         BucketName: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^InputBucket',
-            ),
+          Ref: Match.stringLikeRegexp('^InputBucket'),
         },
-        NotificationConfiguration:
-          Match.objectLike({
-            LambdaFunctionConfigurations:
-              Match.arrayWith([
-                Match.objectLike({
-                  Events: [
-                    's3:ObjectCreated:*',
-                  ],
-                  LambdaFunctionArn: {
-                    'Fn::GetAtt': [
-                      Match.stringLikeRegexp(
-                        '^ProcessorHandler',
-                      ),
-                      'Arn',
-                    ],
-                  },
-                }),
-              ]),
-          }),
+        NotificationConfiguration: Match.objectLike({
+          LambdaFunctionConfigurations: Match.arrayWith([
+            Match.objectLike({
+              Events: ['s3:ObjectCreated:*'],
+              LambdaFunctionArn: {
+                'Fn::GetAtt': [
+                  Match.stringLikeRegexp('^ProcessorHandler'),
+                  'Arn',
+                ],
+              },
+            }),
+          ]),
+        }),
       }),
     );
   });
@@ -210,25 +160,18 @@ describe('InfraStack', () => {
     template.hasResourceProperties(
       'AWS::Lambda::Permission',
       Match.objectLike({
-        Action:
-          'lambda:InvokeFunction',
-        Principal:
-          's3.amazonaws.com',
+        Action: 'lambda:InvokeFunction',
+        Principal: 's3.amazonaws.com',
         FunctionName: {
           'Fn::GetAtt': [
-            Match.stringLikeRegexp(
-              '^ProcessorHandler',
-            ),
+            Match.stringLikeRegexp('^ProcessorHandler'),
             'Arn',
           ],
         },
-        SourceAccount:
-          testAWSAccount,
+        SourceAccount: testAWSAccount,
         SourceArn: {
           'Fn::GetAtt': [
-            Match.stringLikeRegexp(
-              '^InputBucket',
-            ),
+            Match.stringLikeRegexp('^InputBucket'),
             'Arn',
           ],
         },
@@ -239,10 +182,7 @@ describe('InfraStack', () => {
   test('outputs CloudFront URL', () => {
     template.hasOutput(
       'CloudFrontURL',
-      Match.objectLike({
-        Value:
-          Match.anyValue(),
-      }),
+      Match.objectLike({ Value: Match.anyValue() }),
     );
   });
 
@@ -250,14 +190,8 @@ describe('InfraStack', () => {
     template.hasOutput(
       'SlackClientSecretArn',
       Match.objectLike({
-        Description:
-          'Secrets Manager ARN for the Slack client secret',
-        Value: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^SlackClientSecret',
-            ),
-        },
+        Description: 'Secrets Manager ARN for the Slack client secret',
+        Value: { Ref: Match.stringLikeRegexp('^SlackClientSecret') },
       }),
     );
   });
@@ -266,14 +200,8 @@ describe('InfraStack', () => {
     template.hasOutput(
       'CognitoUserPoolId',
       Match.objectLike({
-        Description:
-          'Cognito user pool ID',
-        Value: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^UserPool',
-            ),
-        },
+        Description: 'Cognito user pool ID',
+        Value: { Ref: Match.stringLikeRegexp('^UserPool') },
       }),
     );
   });
@@ -282,14 +210,8 @@ describe('InfraStack', () => {
     template.hasOutput(
       'CognitoUserPoolClientId',
       Match.objectLike({
-        Description:
-          'Cognito user pool client ID',
-        Value: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^UserPoolUserPoolClient',
-            ),
-        },
+        Description: 'Cognito user pool client ID',
+        Value: { Ref: Match.stringLikeRegexp('^UserPoolUserPoolClient') },
       }),
     );
   });
@@ -298,10 +220,8 @@ describe('InfraStack', () => {
     template.hasOutput(
       'CognitoDomain',
       Match.objectLike({
-        Description:
-          'Cognito managed login domain',
-        Value:
-          Match.anyValue(),
+        Description: 'Cognito managed login domain',
+        Value: Match.anyValue(),
       }),
     );
   });
@@ -310,10 +230,8 @@ describe('InfraStack', () => {
     template.hasOutput(
       'GoogleRedirectUri',
       Match.objectLike({
-        Description:
-          'Redirect URI for the Google OAuth client',
-        Value:
-          Match.anyValue(),
+        Description: 'Redirect URI for the Google OAuth client',
+        Value: Match.anyValue(),
       }),
     );
   });
@@ -322,14 +240,8 @@ describe('InfraStack', () => {
     template.hasOutput(
       'GoogleOAuthClientSecretArn',
       Match.objectLike({
-        Description:
-          'Secrets Manager ARN for the Google OAuth client secret',
-        Value: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^GoogleOAuthClientSecret',
-            ),
-        },
+        Description: 'Secrets Manager ARN for the Google OAuth client secret',
+        Value: { Ref: Match.stringLikeRegexp('^GoogleOAuthClientSecret') },
       }),
     );
   });

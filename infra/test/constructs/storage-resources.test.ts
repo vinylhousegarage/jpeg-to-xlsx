@@ -8,32 +8,24 @@ import {
   createStorageResources,
   StorageResources,
 } from '../../lib/constructs/storage-resources';
-import {
-  createTestStack,
-} from '../infra-stack-test-helpers';
+import { createTestStack } from '../infra-stack-test-helpers';
 
 describe('createStorageResources', () => {
   let template: Template;
   let resources: StorageResources;
 
   beforeAll(() => {
-    const stack = createTestStack(
-      'StorageResourcesTestStack',
+    const stack = createTestStack('StorageResourcesTestStack');
+
+    resources = createStorageResources(
+      stack,
+      {
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        autoDeleteObjects: true,
+      },
     );
 
-    resources =
-      createStorageResources(
-        stack,
-        {
-          removalPolicy:
-            cdk.RemovalPolicy.DESTROY,
-          autoDeleteObjects:
-            true,
-        },
-      );
-
-    template =
-      Template.fromStack(stack);
+    template = Template.fromStack(stack);
   });
 
   test('creates three S3 buckets', () => {
@@ -47,20 +39,15 @@ describe('createStorageResources', () => {
     template.hasResourceProperties(
       'AWS::S3::Bucket',
       Match.objectLike({
-        LifecycleConfiguration:
-          Match.objectLike({
-            Rules:
-              Match.arrayWith([
-                Match.objectLike({
-                  ExpirationInDays:
-                    1,
-                  Status:
-                    'Enabled',
-                }),
-              ]),
-          }),
-        CorsConfiguration:
-          Match.anyValue(),
+        LifecycleConfiguration: Match.objectLike({
+          Rules: Match.arrayWith([
+            Match.objectLike({
+              ExpirationInDays: 1,
+              Status: 'Enabled',
+            }),
+          ]),
+        }),
+        CorsConfiguration: Match.anyValue(),
       }),
     );
   });
@@ -69,23 +56,15 @@ describe('createStorageResources', () => {
     template.hasResourceProperties(
       'AWS::S3::Bucket',
       Match.objectLike({
-        CorsConfiguration:
-          Match.objectLike({
-            CorsRules:
-              Match.arrayWith([
-                Match.objectLike({
-                  AllowedHeaders: [
-                    '*',
-                  ],
-                  AllowedMethods: [
-                    'PUT',
-                  ],
-                  AllowedOrigins: [
-                    '*',
-                  ],
-                }),
-              ]),
-          }),
+        CorsConfiguration: Match.objectLike({
+          CorsRules: Match.arrayWith([
+            Match.objectLike({
+              AllowedHeaders: ['*'],
+              AllowedMethods: ['PUT'],
+              AllowedOrigins: ['*'],
+            }),
+          ]),
+        }),
       }),
     );
   });
@@ -94,22 +73,15 @@ describe('createStorageResources', () => {
     template.hasResourceProperties(
       'AWS::S3::Bucket',
       Match.objectLike({
-        LifecycleConfiguration:
-          Match.objectLike({
-            Rules:
-              Match.arrayWith([
-                Match.objectLike({
-                  ExpirationInDays:
-                    1,
-                  Status:
-                    'Enabled',
-                }),
-              ]),
-          }),
-        CorsConfiguration:
-          Match.absent(),
-        PublicAccessBlockConfiguration:
-          Match.absent(),
+        LifecycleConfiguration: Match.objectLike({
+          Rules: Match.arrayWith([
+            Match.objectLike({
+              ExpirationInDays: 1,
+              Status: 'Enabled',
+            }),
+          ]),
+        }),
+        CorsConfiguration: Match.absent(),
       }),
     );
   });
@@ -119,14 +91,10 @@ describe('createStorageResources', () => {
       'AWS::S3::Bucket',
       Match.objectLike({
         PublicAccessBlockConfiguration: {
-          BlockPublicAcls:
-            true,
-          BlockPublicPolicy:
-            true,
-          IgnorePublicAcls:
-            true,
-          RestrictPublicBuckets:
-            true,
+          BlockPublicAcls: true,
+          BlockPublicPolicy: true,
+          IgnorePublicAcls: true,
+          RestrictPublicBuckets: true,
         },
       }),
     );
@@ -136,10 +104,8 @@ describe('createStorageResources', () => {
     template.hasResourceProperties(
       'AWS::S3::Bucket',
       Match.objectLike({
-        PublicAccessBlockConfiguration:
-          Match.anyValue(),
-        LifecycleConfiguration:
-          Match.absent(),
+        PublicAccessBlockConfiguration: Match.anyValue(),
+        LifecycleConfiguration: Match.absent(),
       }),
     );
   });
@@ -152,49 +118,26 @@ describe('createStorageResources', () => {
   });
 
   test('applies delete policy to all buckets', () => {
-    const buckets =
-      template.findResources(
-        'AWS::S3::Bucket',
-      );
+    const buckets = template.findResources('AWS::S3::Bucket');
 
-    expect(
-      Object.values(buckets),
-    ).toHaveLength(3);
+    expect(Object.values(buckets)).toHaveLength(3);
 
-    for (
-      const bucket of Object.values(
-        buckets,
-      )
-    ) {
-      expect(
-        bucket.DeletionPolicy,
-      ).toBe(
-        'Delete',
-      );
+    for (const bucket of Object.values(buckets)) {
+      expect(bucket.DeletionPolicy).toBe('Delete');
 
-      expect(
-        bucket.UpdateReplacePolicy,
-      ).toBe(
-        'Delete',
-      );
+      expect(bucket.UpdateReplacePolicy).toBe('Delete');
     }
   });
 
   test('returns input bucket', () => {
-    expect(
-      resources.inputBucket,
-    ).toBeDefined();
+    expect(resources.inputBucket).toBeDefined();
   });
 
   test('returns output bucket', () => {
-    expect(
-      resources.outputBucket,
-    ).toBeDefined();
+    expect(resources.outputBucket).toBeDefined();
   });
 
   test('returns website bucket', () => {
-    expect(
-      resources.websiteBucket,
-    ).toBeDefined();
+    expect(resources.websiteBucket).toBeDefined();
   });
 });

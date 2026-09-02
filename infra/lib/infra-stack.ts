@@ -4,31 +4,17 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import { Construct } from 'constructs';
 
-import {
-  createAuthResources,
-} from './constructs/auth-resources';
-import {
-  createComputeResources,
-} from './constructs/compute-resources';
-import {
-  createDeliveryResources,
-} from './constructs/delivery-resources';
-import {
-  createSlackResources,
-} from './constructs/slack-resources';
-import {
-  createStorageResources,
-} from './constructs/storage-resources';
+import { createAuthResources } from './constructs/auth-resources';
+import { createComputeResources } from './constructs/compute-resources';
+import { createDeliveryResources } from './constructs/delivery-resources';
+import { createSlackResources } from './constructs/slack-resources';
+import { createStorageResources } from './constructs/storage-resources';
 
-function requireEnv(
-  name: string,
-): string {
+function requireEnv(name: string): string {
   const value = process.env[name];
 
   if (!value) {
-    throw new Error(
-      `${name} is required`,
-    );
+    throw new Error(`${name} is required`);
   }
 
   return value;
@@ -42,334 +28,148 @@ export class InfraStack extends cdk.Stack {
   ) {
     super(scope, id, props);
 
-    const appEnv = requireEnv(
-      'APP_ENV',
-    );
-
-    const applicationUrl = requireEnv(
-      'APPLICATION_URL',
-    );
-
-    const bedrockModelId = requireEnv(
-      'BEDROCK_MODEL_ID',
-    );
-
-    const promptFileName =
-      process.env.PROMPT_FILE_NAME ||
-      'extractor.txt';
-
-    const slackClientId = requireEnv(
-      'SLACK_CLIENT_ID',
-    );
-
-    const slackRedirectUri = requireEnv(
-      'SLACK_REDIRECT_URI',
-    );
-
-    const googleClientId = requireEnv(
-      'GOOGLE_CLIENT_ID',
-    );
+    const appEnv = requireEnv('APP_ENV');
+    const applicationUrl = requireEnv('APPLICATION_URL');
+    const bedrockModelId = requireEnv('BEDROCK_MODEL_ID');
+    const promptFileName = process.env.PROMPT_FILE_NAME || 'extractor.txt';
+    const slackClientId = requireEnv('SLACK_CLIENT_ID');
+    const slackRedirectUri = requireEnv('SLACK_REDIRECT_URI');
+    const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
 
     // リソース削除設定
 
-    const removalPolicy =
-      cdk.RemovalPolicy.DESTROY;
-
+    const removalPolicy = cdk.RemovalPolicy.DESTROY;
     const autoDeleteObjects = true;
 
     // 1. Slackリソースの作成
 
-    const slackResources =
-      createSlackResources(
-        this,
-        {
-          appEnv,
-          removalPolicy,
-        },
-      );
+    const slackResources = createSlackResources(this, {
+      appEnv,
+      removalPolicy,
+    });
 
     // 2. S3リソースの作成
 
-    const storageResources =
-      createStorageResources(
-        this,
-        {
-          removalPolicy,
-          autoDeleteObjects,
-        },
-      );
+    const storageResources = createStorageResources(this, {
+      removalPolicy,
+      autoDeleteObjects,
+    });
 
     // 3. Cognito認証リソースの作成
 
-    const authResources =
-      createAuthResources(
-        this,
-        {
-          appEnv,
-          applicationUrl,
-          googleClientId,
-          removalPolicy,
-        },
-      );
+    const authResources = createAuthResources(this, {
+      appEnv,
+      applicationUrl,
+      googleClientId,
+      removalPolicy,
+    });
 
-    // 4. Lambda関数の作成
-    // （Goランタイム）
+    // 4. Lambda関数の作成（Goランタイム）
 
-    const computeResources =
-      createComputeResources(
-        this,
-        {
-          appEnv,
-          bedrockModelId,
-          promptFileName,
-          slackClientId,
-          slackRedirectUri,
+    const computeResources = createComputeResources(this, {
+      appEnv,
+      bedrockModelId,
+      promptFileName,
+      slackClientId,
+      slackRedirectUri,
+      inputBucket: storageResources.inputBucket,
+      outputBucket: storageResources.outputBucket,
+      slackSecret: slackResources.slackSecret,
+      slackTokenTable: slackResources.slackTokenTable,
+      cognitoClientId: authResources.userPoolClient.userPoolClientId,
+      cognitoClientSecretArn: authResources.cognitoClientSecret.secretArn,
+      cognitoIssuer: authResources.issuer,
+      cognitoAuthorizationEndpoint: authResources.authorizationEndpoint,
+      cognitoTokenEndpoint: authResources.tokenEndpoint,
+      cognitoRedirectUri: authResources.redirectUri,
+      postLoginRedirectUrl: applicationUrl,
+      oauthStateTableName: authResources.oauthStateTable.tableName,
+      sessionTableName: authResources.sessionTable.tableName,
+    });
 
-          inputBucket:
-            storageResources
-              .inputBucket,
-
-          outputBucket:
-            storageResources
-              .outputBucket,
-
-          slackSecret:
-            slackResources
-              .slackSecret,
-
-          slackTokenTable:
-            slackResources
-              .slackTokenTable,
-
-          cognitoClientId:
-            authResources
-              .userPoolClient
-              .userPoolClientId,
-
-          cognitoClientSecretArn:
-            authResources
-              .cognitoClientSecret
-              .secretArn,
-
-          cognitoIssuer:
-            authResources.issuer,
-
-          cognitoAuthorizationEndpoint:
-            authResources
-              .authorizationEndpoint,
-
-          cognitoTokenEndpoint:
-            authResources
-              .tokenEndpoint,
-
-          cognitoRedirectUri:
-            authResources.redirectUri,
-
-          postLoginRedirectUrl:
-            applicationUrl,
-
-          oauthStateTableName:
-            authResources
-              .oauthStateTable
-              .tableName,
-
-          sessionTableName:
-            authResources
-              .sessionTable
-              .tableName,
-        },
-      );
+    const { apiHandler, processorHandler } = computeResources;
 
     // 5. IAM権限とイベントトリガー
 
     // API HandlerのS3権限
 
-    storageResources.inputBucket
-      .grantWrite(
-        computeResources
-          .apiHandler,
-      );
+    storageResources.inputBucket.grantWrite(apiHandler);
 
     // API HandlerのSlack権限
 
-    slackResources.slackTokenTable
-      .grantReadWriteData(
-        computeResources
-          .apiHandler,
-      );
-
-    slackResources.slackSecret
-      .grantRead(
-        computeResources
-          .apiHandler,
-      );
+    slackResources.slackTokenTable.grantReadWriteData(apiHandler);
+    slackResources.slackSecret.grantRead(apiHandler);
 
     // API Handlerの認証権限
 
-    authResources.cognitoClientSecret
-      .grantRead(
-        computeResources
-          .apiHandler,
-      );
-
-    authResources.oauthStateTable
-      .grantReadWriteData(
-        computeResources
-          .apiHandler,
-      );
-
-    authResources.sessionTable
-      .grantReadWriteData(
-        computeResources
-          .apiHandler,
-      );
+    authResources.cognitoClientSecret.grantRead(apiHandler);
+    authResources.oauthStateTable.grantReadWriteData(apiHandler);
+    authResources.sessionTable.grantReadWriteData(apiHandler);
 
     // Processor Handlerの権限
 
-    storageResources.inputBucket
-      .grantRead(
-        computeResources
-          .processorHandler,
-      );
-
-    storageResources.outputBucket
-      .grantReadWrite(
-        computeResources
-          .processorHandler,
-      );
-
-    slackResources.slackTokenTable
-      .grantReadData(
-        computeResources
-          .processorHandler,
-      );
+    storageResources.inputBucket.grantRead(processorHandler);
+    storageResources.outputBucket.grantReadWrite(processorHandler);
+    slackResources.slackTokenTable.grantReadData(processorHandler);
 
     // Processor HandlerにBedrockの実行権限を付与
 
-    computeResources.processorHandler
-      .addToRolePolicy(
-        new iam.PolicyStatement({
-          actions: [
-            'bedrock:InvokeModel',
-          ],
-          resources: ['*'],
-        }),
-      );
+    processorHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['bedrock:InvokeModel'],
+        resources: ['*'],
+      }),
+    );
 
     // Inputバケットへの画像保存時にProcessor Handlerを起動
 
-    storageResources.inputBucket
-      .addEventNotification(
-        s3.EventType.OBJECT_CREATED,
-        new s3n.LambdaDestination(
-          computeResources
-            .processorHandler,
-        ),
-      );
+    storageResources.inputBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(processorHandler),
+    );
 
-    // 6. 配信リソースの作成（API Gateway・CloudFront・Frontend）
+    // 6. 配信リソースの作成
+    // （API Gateway・CloudFront・Frontend）
 
-    const deliveryResources =
-      createDeliveryResources(
-        this,
-        {
-          apiHandler:
-            computeResources
-              .apiHandler,
-
-          websiteBucket:
-            storageResources
-              .websiteBucket,
-        },
-      );
+    const deliveryResources = createDeliveryResources(this, {
+      apiHandler,
+      websiteBucket: storageResources.websiteBucket,
+    });
 
     // 7. Outputs
 
-    new cdk.CfnOutput(
-      this,
-      'CloudFrontURL',
-      {
-        value:
-          deliveryResources
-            .applicationUrl,
-      },
-    );
+    new cdk.CfnOutput(this, 'CloudFrontURL', {
+      value: deliveryResources.applicationUrl,
+    });
 
-    new cdk.CfnOutput(
-      this,
-      'SlackClientSecretArn',
-      {
-        value:
-          slackResources
-            .slackSecret
-            .secretArn,
-        description:
-          'Secrets Manager ARN for the Slack client secret',
-      },
-    );
+    new cdk.CfnOutput(this, 'SlackClientSecretArn', {
+      value: slackResources.slackSecret.secretArn,
+      description: 'Secrets Manager ARN for the Slack client secret',
+    });
 
-    new cdk.CfnOutput(
-      this,
-      'CognitoUserPoolId',
-      {
-        value:
-          authResources
-            .userPool
-            .userPoolId,
-        description:
-          'Cognito user pool ID',
-      },
-    );
+    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+      value: authResources.userPool.userPoolId,
+      description: 'Cognito user pool ID',
+    });
 
-    new cdk.CfnOutput(
-      this,
-      'CognitoDomain',
-      {
-        value:
-          authResources
-            .userPoolDomain
-            .baseUrl(),
-        description:
-          'Cognito managed login domain',
-      },
-    );
+    new cdk.CfnOutput(this, 'CognitoDomain', {
+      value: authResources.userPoolDomain.baseUrl(),
+      description: 'Cognito managed login domain',
+    });
 
-    new cdk.CfnOutput(
-      this,
-      'GoogleRedirectUri',
-      {
-        value:
-          authResources
-            .googleRedirectUri,
-        description:
-          'Redirect URI for the Google OAuth client',
-      },
-    );
+    new cdk.CfnOutput(this, 'GoogleRedirectUri', {
+      value: authResources.googleRedirectUri,
+      description: 'Redirect URI for the Google OAuth client',
+    });
 
-    new cdk.CfnOutput(
-      this,
-      'GoogleOAuthClientSecretArn',
-      {
-        value:
-          authResources
-            .googleOAuthSecret
-            .secretArn,
-        description:
-          'Secrets Manager ARN for the Google OAuth client secret',
-      },
-    );
+    new cdk.CfnOutput(this, 'GoogleOAuthClientSecretArn', {
+      value: authResources.googleOAuthSecret.secretArn,
+      description: 'Secrets Manager ARN for the Google OAuth client secret',
+    });
 
-    new cdk.CfnOutput(
-      this,
-      'CognitoUserPoolClientId',
-      {
-        value:
-          authResources
-            .userPoolClient
-            .userPoolClientId,
-        description:
-          'Cognito user pool client ID',
-      },
-    );
+    new cdk.CfnOutput(this, 'CognitoUserPoolClientId', {
+      value: authResources.userPoolClient.userPoolClientId,
+      description: 'Cognito user pool client ID',
+    });
   }
 }

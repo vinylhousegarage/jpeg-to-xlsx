@@ -17,31 +17,24 @@ import {
 
 describe('createAuthResources', () => {
   let template: Template;
-  let resources:
-    AuthResources;
+  let resources: AuthResources;
 
   beforeAll(() => {
     const stack = createTestStack(
       'AuthResourcesTestStack',
     );
 
-    resources =
-      createAuthResources(
-        stack,
-        {
-          appEnv:
-            testAppEnv,
-          applicationUrl:
-            testApplicationUrl,
-          googleClientId:
-            testGoogleClientId,
-          removalPolicy:
-            cdk.RemovalPolicy.DESTROY,
-        },
-      );
+    resources = createAuthResources(
+      stack,
+      {
+        appEnv: testAppEnv,
+        applicationUrl: testApplicationUrl,
+        googleClientId: testGoogleClientId,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      },
+    );
 
-    template =
-      Template.fromStack(stack);
+    template = Template.fromStack(stack);
   });
 
   test('creates Cognito user pool', () => {
@@ -53,17 +46,9 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::Cognito::UserPool',
       Match.objectLike({
-        UserPoolName:
-          'jpeg-to-xlsx-staging-users',
-        AdminCreateUserConfig:
-          Match.objectLike({
-            AllowAdminCreateUserOnly:
-              true,
-          }),
-        UsernameConfiguration: {
-          CaseSensitive:
-            false,
-        },
+        UserPoolName: 'jpeg-to-xlsx-staging-users',
+        AdminCreateUserConfig: Match.objectLike({ AllowAdminCreateUserOnly: true }),
+        UsernameConfiguration: { CaseSensitive: false },
       }),
     );
   });
@@ -77,14 +62,8 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::Cognito::UserPoolDomain',
       Match.objectLike({
-        Domain:
-          'jpeg-to-xlsx-staging-123456789012',
-        UserPoolId: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^UserPool',
-            ),
-        },
+        Domain: 'jpeg-to-xlsx-staging-123456789012',
+        UserPoolId: { Ref: Match.stringLikeRegexp('^UserPool') },
       }),
     );
   });
@@ -93,10 +72,8 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::SecretsManager::Secret',
       Match.objectLike({
-        Name:
-          'jpeg-to-xlsx/staging/google-oauth-client',
-        Description:
-          'Google OAuth client secret for jpeg-to-xlsx staging',
+        Name: 'jpeg-to-xlsx/staging/google-oauth-client',
+        Description: 'Google OAuth client secret for jpeg-to-xlsx staging',
       }),
     );
   });
@@ -110,33 +87,20 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::Cognito::UserPoolIdentityProvider',
       Match.objectLike({
-        ProviderName:
-          'Google',
-        ProviderType:
-          'Google',
-        ProviderDetails:
-          Match.objectLike({
-            client_id:
-              testGoogleClientId,
-            client_secret:
-              Match.anyValue(),
-            authorize_scopes:
-              'openid email profile',
-          }),
-        AttributeMapping:
-          Match.objectLike({
-            email:
-              'email',
-            given_name:
-              'given_name',
-            family_name:
-              'family_name',
-          }),
+        ProviderName: 'Google',
+        ProviderType: 'Google',
+        ProviderDetails: Match.objectLike({
+          client_id: testGoogleClientId,
+          client_secret: Match.anyValue(),
+          authorize_scopes: 'openid email profile',
+        }),
+        AttributeMapping: Match.objectLike({
+          email: 'email',
+          given_name: 'given_name',
+          family_name: 'family_name',
+        }),
         UserPoolId: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^UserPool',
-            ),
+          Ref: Match.stringLikeRegexp('^UserPool'),
         },
       }),
     );
@@ -151,38 +115,20 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::Cognito::UserPoolClient',
       Match.objectLike({
-        ClientName:
-          'jpeg-to-xlsx-staging-client',
-        GenerateSecret:
-          true,
-        PreventUserExistenceErrors:
-          'ENABLED',
-        SupportedIdentityProviders: [
-          'Google',
-        ],
-        AllowedOAuthFlows: [
-          'code',
-        ],
-        AllowedOAuthFlowsUserPoolClient:
-          true,
-        AllowedOAuthScopes:
-          Match.arrayWith([
-            'openid',
-            'email',
-            'profile',
-          ]),
-        CallbackURLs: [
-          `${testApplicationUrl}/api/auth/callback`,
-        ],
-        LogoutURLs: [
-          testApplicationUrl,
-        ],
-        UserPoolId: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^UserPool',
-            ),
-        },
+        ClientName: 'jpeg-to-xlsx-staging-client',
+        GenerateSecret: true,
+        PreventUserExistenceErrors: 'ENABLED',
+        SupportedIdentityProviders: ['Google'],
+        AllowedOAuthFlows: ['code'],
+        AllowedOAuthFlowsUserPoolClient: true,
+        AllowedOAuthScopes: Match.arrayWith([
+          'openid',
+          'email',
+          'profile',
+        ]),
+        CallbackURLs: [`${testApplicationUrl}/api/auth/callback`],
+        LogoutURLs: [testApplicationUrl],
+        UserPoolId: { Ref: Match.stringLikeRegexp('^UserPool') },
       }),
     );
   });
@@ -191,12 +137,9 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::SecretsManager::Secret',
       Match.objectLike({
-        Name:
-          'jpeg-to-xlsx/staging/cognito-client-secret',
-        Description:
-          'Cognito client secret for jpeg-to-xlsx staging',
-        SecretString:
-          Match.anyValue(),
+        Name: 'jpeg-to-xlsx/staging/cognito-client-secret',
+        Description: 'Cognito client secret for jpeg-to-xlsx staging',
+        SecretString: Match.anyValue(),
       }),
     );
   });
@@ -212,31 +155,23 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::DynamoDB::Table',
       Match.objectLike({
-        TableName:
-          'jpeg-to-xlsx-staging-cognito-oauth-states',
-        BillingMode:
-          'PAY_PER_REQUEST',
+        TableName: 'jpeg-to-xlsx-staging-cognito-oauth-states',
+        BillingMode: 'PAY_PER_REQUEST',
         AttributeDefinitions: [
           {
-            AttributeName:
-              'state',
-            AttributeType:
-              'S',
+            AttributeName: 'state',
+            AttributeType: 'S',
           },
         ],
         KeySchema: [
           {
-            AttributeName:
-              'state',
-            KeyType:
-              'HASH',
+            AttributeName: 'state',
+            KeyType: 'HASH',
           },
         ],
         TimeToLiveSpecification: {
-          AttributeName:
-            'expires_at',
-          Enabled:
-            true,
+          AttributeName: 'expires_at',
+          Enabled: true,
         },
       }),
     );
@@ -246,31 +181,23 @@ describe('createAuthResources', () => {
     template.hasResourceProperties(
       'AWS::DynamoDB::Table',
       Match.objectLike({
-        TableName:
-          'jpeg-to-xlsx-staging-auth-sessions',
-        BillingMode:
-          'PAY_PER_REQUEST',
+        TableName: 'jpeg-to-xlsx-staging-auth-sessions',
+        BillingMode: 'PAY_PER_REQUEST',
         AttributeDefinitions: [
           {
-            AttributeName:
-              'id_hash',
-            AttributeType:
-              'S',
+            AttributeName: 'id_hash',
+            AttributeType: 'S',
           },
         ],
         KeySchema: [
           {
-            AttributeName:
-              'id_hash',
-            KeyType:
-              'HASH',
+            AttributeName: 'id_hash',
+            KeyType: 'HASH',
           },
         ],
         TimeToLiveSpecification: {
-          AttributeName:
-            'expires_at',
-          Enabled:
-            true,
+          AttributeName: 'expires_at',
+          Enabled: true,
         },
       }),
     );
@@ -284,9 +211,7 @@ describe('createAuthResources', () => {
   });
 
   test('returns Cognito redirect URI', () => {
-    expect(
-      resources.redirectUri,
-    ).toBe(
+    expect(resources.redirectUri).toBe(
       `${testApplicationUrl}/api/auth/callback`,
     );
   });
@@ -294,38 +219,24 @@ describe('createAuthResources', () => {
   test('returns Cognito authorization endpoint', () => {
     expect(
       resources.authorizationEndpoint,
-    ).toContain(
-      '/oauth2/authorize',
-    );
+    ).toContain('/oauth2/authorize');
   });
 
   test('returns Cognito token endpoint', () => {
     expect(
       resources.tokenEndpoint,
-    ).toContain(
-      '/oauth2/token',
-    );
+    ).toContain('/oauth2/token');
   });
 
   test('returns Google OAuth redirect URI', () => {
     expect(
       resources.googleRedirectUri,
-    ).toContain(
-      '/oauth2/idpresponse',
-    );
+    ).toContain('/oauth2/idpresponse');
   });
 
   test('returns Cognito issuer', () => {
-    expect(
-      resources.issuer,
-    ).toMatch(
-      /^https:\/\/cognito-idp\.ap-northeast-1\./,
-    );
-
-    expect(
-      resources.issuer,
-    ).toContain(
-      '/',
+    expect(resources.issuer).toMatch(
+      /^https:\/\/cognito-idp\.ap-northeast-1\..+\/.+$/,
     );
   });
 });
