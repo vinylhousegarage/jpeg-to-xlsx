@@ -9,11 +9,8 @@ export type SlackResourcesProps = {
 };
 
 export type SlackResources = {
-  slackSecret:
-    secretsmanager.Secret;
-
-  slackTokenTable:
-    dynamodb.Table;
+  slackSecret: secretsmanager.Secret;
+  slackTokenTable: dynamodb.Table;
 };
 
 export const createSlackResources = (
@@ -21,35 +18,28 @@ export const createSlackResources = (
   props: SlackResourcesProps,
 ): SlackResources => {
   // Slack Client Secret保存用Secret
-  const slackSecret =
-    new secretsmanager.Secret(
-      scope,
-      'SlackClientSecret',
-      {
-        secretName:
-          `jpeg-to-xlsx/${props.appEnv}/slack-client-secret`,
-        description:
-          `Slack client secret for jpeg-to-xlsx ${props.appEnv}`,
-        removalPolicy:
-          props.removalPolicy,
-      },
-    );
+  const slackSecret = new secretsmanager.Secret(
+    scope,
+    'SlackClientSecret',
+    {
+      secretName: `jpeg-to-xlsx/${props.appEnv}/slack-client-secret`,
+      description: `Slack client secret for jpeg-to-xlsx ${props.appEnv}`,
+      removalPolicy: props.removalPolicy,
+    },
+  );
 
   // Slack OAuthトークン保存用テーブル
-  const slackTokenTable =
-    new dynamodb.Table(
-      scope,
-      'SlackTokenTable',
-      {
-        partitionKey: {
-          name: 'id',
-          type:
-            dynamodb.AttributeType.STRING,
-        },
-        removalPolicy:
-          props.removalPolicy,
+  const slackTokenTable = new dynamodb.Table(
+    scope,
+    'SlackTokenTable',
+    {
+      partitionKey: {
+        name: 'id',
+        type: dynamodb.AttributeType.STRING,
       },
-    );
+      removalPolicy: props.removalPolicy,
+    },
+  );
 
   return {
     slackSecret,

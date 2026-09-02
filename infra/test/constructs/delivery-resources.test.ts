@@ -9,53 +9,41 @@ import {
   createDeliveryResources,
   DeliveryResources,
 } from '../../lib/constructs/delivery-resources';
-import {
-  createTestStack,
-} from '../infra-stack-test-helpers';
+import { createTestStack } from '../infra-stack-test-helpers';
 
 describe('createDeliveryResources', () => {
   let template: Template;
   let resources: DeliveryResources;
 
   beforeAll(() => {
-    const stack = createTestStack(
-      'DeliveryResourcesTestStack',
+    const stack = createTestStack('DeliveryResourcesTestStack');
+
+    const apiHandler = new lambda.Function(
+      stack,
+      'ApiHandler',
+      {
+        runtime: lambda.Runtime.NODEJS_24_X,
+        handler: 'index.handler',
+        code: lambda.Code.fromInline(
+          'exports.handler = async () => ({ statusCode: 200 });',
+        ),
+      },
     );
 
-    const apiHandler =
-      new lambda.Function(
-        stack,
-        'ApiHandler',
-        {
-          runtime:
-            lambda.Runtime
-              .NODEJS_24_X,
-          handler:
-            'index.handler',
-          code:
-            lambda.Code.fromInline(
-              'exports.handler = async () => ({ statusCode: 200 });',
-            ),
-        },
-      );
+    const websiteBucket = new s3.Bucket(
+      stack,
+      'WebsiteBucket',
+    );
 
-    const websiteBucket =
-      new s3.Bucket(
-        stack,
-        'WebsiteBucket',
-      );
+    resources = createDeliveryResources(
+      stack,
+      {
+        apiHandler,
+        websiteBucket,
+      },
+    );
 
-    resources =
-      createDeliveryResources(
-        stack,
-        {
-          apiHandler,
-          websiteBucket,
-        },
-      );
-
-    template =
-      Template.fromStack(stack);
+    template = Template.fromStack(stack);
   });
 
   test('creates HTTP API', () => {
@@ -67,10 +55,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Api',
       Match.objectLike({
-        Name:
-          'Jpeg To Xlsx HTTP API',
-        ProtocolType:
-          'HTTP',
+        Name: 'Jpeg To Xlsx HTTP API',
+        ProtocolType: 'HTTP',
       }),
     );
   });
@@ -79,10 +65,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Api',
       Match.objectLike({
-        ProtocolType:
-          'HTTP',
-        CorsConfiguration:
-          Match.absent(),
+        ProtocolType: 'HTTP',
+        CorsConfiguration: Match.absent(),
       }),
     );
   });
@@ -91,10 +75,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Route',
       Match.objectLike({
-        RouteKey:
-          'GET /api/auth/login',
-        Target:
-          Match.anyValue(),
+        RouteKey: 'GET /api/auth/login',
+        Target: Match.anyValue(),
       }),
     );
   });
@@ -103,10 +85,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Route',
       Match.objectLike({
-        RouteKey:
-          'GET /api/auth/callback',
-        Target:
-          Match.anyValue(),
+        RouteKey: 'GET /api/auth/callback',
+        Target: Match.anyValue(),
       }),
     );
   });
@@ -115,10 +95,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Route',
       Match.objectLike({
-        RouteKey:
-          'GET /api/oauth/slack/login',
-        Target:
-          Match.anyValue(),
+        RouteKey: 'GET /api/oauth/slack/login',
+        Target: Match.anyValue(),
       }),
     );
   });
@@ -127,10 +105,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Route',
       Match.objectLike({
-        RouteKey:
-          'GET /api/oauth/slack/callback',
-        Target:
-          Match.anyValue(),
+        RouteKey: 'GET /api/oauth/slack/callback',
+        Target: Match.anyValue(),
       }),
     );
   });
@@ -139,10 +115,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Route',
       Match.objectLike({
-        RouteKey:
-          'POST /api/storage/upload',
-        Target:
-          Match.anyValue(),
+        RouteKey: 'POST /api/storage/upload',
+        Target: Match.anyValue(),
       }),
     );
   });
@@ -158,10 +132,8 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Stage',
       Match.objectLike({
-        StageName:
-          '$default',
-        AutoDeploy:
-          true,
+        StageName: '$default',
+        AutoDeploy: true,
       }),
     );
   });
@@ -170,15 +142,11 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::Lambda::Permission',
       Match.objectLike({
-        Action:
-          'lambda:InvokeFunction',
-        Principal:
-          'apigateway.amazonaws.com',
+        Action: 'lambda:InvokeFunction',
+        Principal: 'apigateway.amazonaws.com',
         FunctionName: {
           'Fn::GetAtt': [
-            Match.stringLikeRegexp(
-              '^ApiHandler',
-            ),
+            Match.stringLikeRegexp('^ApiHandler'),
             'Arn',
           ],
         },
@@ -195,13 +163,10 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::CloudFront::Distribution',
       Match.objectLike({
-        DistributionConfig:
-          Match.objectLike({
-            Enabled:
-              true,
-            DefaultRootObject:
-              'index.html',
-          }),
+        DistributionConfig: Match.objectLike({
+          Enabled: true,
+          DefaultRootObject: 'index.html',
+        }),
       }),
     );
   });
@@ -210,14 +175,11 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::CloudFront::Distribution',
       Match.objectLike({
-        DistributionConfig:
-          Match.objectLike({
-            DefaultCacheBehavior:
-              Match.objectLike({
-                ViewerProtocolPolicy:
-                  'redirect-to-https',
-              }),
+        DistributionConfig: Match.objectLike({
+          DefaultCacheBehavior: Match.objectLike({
+            ViewerProtocolPolicy: 'redirect-to-https',
           }),
+        }),
       }),
     );
   });
@@ -226,30 +188,26 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::CloudFront::Distribution',
       Match.objectLike({
-        DistributionConfig:
-          Match.objectLike({
-            CacheBehaviors:
-              Match.arrayWith([
-                Match.objectLike({
-                  PathPattern:
-                    '/api/*',
-                  ViewerProtocolPolicy:
-                    'redirect-to-https',
-                  AllowedMethods:
-                    Match.arrayWith([
-                      'GET',
-                      'HEAD',
-                      'OPTIONS',
-                      'PUT',
-                      'PATCH',
-                      'POST',
-                      'DELETE',
-                    ]),
-                  Compress:
-                    true,
-                }),
+        DistributionConfig: Match.objectLike({
+          CacheBehaviors: Match.arrayWith([
+            Match.objectLike({
+              PathPattern: '/api/*',
+              ViewerProtocolPolicy: 'redirect-to-https',
+              AllowedMethods: Match.arrayWith([
+                'GET',
+                'HEAD',
+                'OPTIONS',
+                'PUT',
+                'PATCH',
+                'POST',
+                'DELETE',
               ]),
-          }),
+              CachePolicyId: Match.anyValue(),
+              OriginRequestPolicyId: Match.anyValue(),
+              Compress: true,
+            }),
+          ]),
+        }),
       }),
     );
   });
@@ -263,15 +221,11 @@ describe('createDeliveryResources', () => {
     template.hasResourceProperties(
       'AWS::CloudFront::OriginAccessControl',
       Match.objectLike({
-        OriginAccessControlConfig:
-          Match.objectLike({
-            OriginAccessControlOriginType:
-              's3',
-            SigningBehavior:
-              'always',
-            SigningProtocol:
-              'sigv4',
-          }),
+        OriginAccessControlConfig: Match.objectLike({
+          OriginAccessControlOriginType: 's3',
+          SigningBehavior: 'always',
+          SigningProtocol: 'sigv4',
+        }),
       }),
     );
   });
@@ -281,41 +235,25 @@ describe('createDeliveryResources', () => {
       'Custom::CDKBucketDeployment',
       Match.objectLike({
         DestinationBucketName: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^WebsiteBucket',
-            ),
+          Ref: Match.stringLikeRegexp('^WebsiteBucket'),
         },
         DistributionId: {
-          Ref:
-            Match.stringLikeRegexp(
-              '^WebsiteDistribution',
-            ),
+          Ref: Match.stringLikeRegexp('^WebsiteDistribution'),
         },
-        DistributionPaths: [
-          '/*',
-        ],
+        DistributionPaths: ['/*'],
       }),
     );
   });
 
   test('returns HTTP API', () => {
-    expect(
-      resources.api,
-    ).toBeDefined();
+    expect(resources.api).toBeDefined();
   });
 
   test('returns CloudFront distribution', () => {
-    expect(
-      resources.distribution,
-    ).toBeDefined();
+    expect(resources.distribution).toBeDefined();
   });
 
   test('returns application URL', () => {
-    expect(
-      resources.applicationUrl,
-    ).toContain(
-      'https://',
-    );
+    expect(resources.applicationUrl).toMatch(/^https:\/\/.+$/);
   });
 });

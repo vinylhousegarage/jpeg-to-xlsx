@@ -18,23 +18,17 @@ describe('createSlackResources', () => {
   let resources: SlackResources;
 
   beforeAll(() => {
-    const stack = createTestStack(
-      'SlackResourcesTestStack',
+    const stack = createTestStack('SlackResourcesTestStack');
+
+    resources = createSlackResources(
+      stack,
+      {
+        appEnv: testAppEnv,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      },
     );
 
-    resources =
-      createSlackResources(
-        stack,
-        {
-          appEnv:
-            testAppEnv,
-          removalPolicy:
-            cdk.RemovalPolicy.DESTROY,
-        },
-      );
-
-    template =
-      Template.fromStack(stack);
+    template = Template.fromStack(stack);
   });
 
   test('creates Slack client secret', () => {
@@ -46,10 +40,8 @@ describe('createSlackResources', () => {
     template.hasResourceProperties(
       'AWS::SecretsManager::Secret',
       Match.objectLike({
-        Name:
-          'jpeg-to-xlsx/staging/slack-client-secret',
-        Description:
-          'Slack client secret for jpeg-to-xlsx staging',
+        Name: 'jpeg-to-xlsx/staging/slack-client-secret',
+        Description: 'Slack client secret for jpeg-to-xlsx staging',
       }),
     );
   });
@@ -65,22 +57,17 @@ describe('createSlackResources', () => {
       Match.objectLike({
         AttributeDefinitions: [
           {
-            AttributeName:
-              'id',
-            AttributeType:
-              'S',
+            AttributeName: 'id',
+            AttributeType: 'S',
           },
         ],
         KeySchema: [
           {
-            AttributeName:
-              'id',
-            KeyType:
-              'HASH',
+            AttributeName: 'id',
+            KeyType: 'HASH',
           },
         ],
-        ProvisionedThroughput:
-          Match.anyValue(),
+        ProvisionedThroughput: Match.anyValue(),
       }),
     );
   });
@@ -89,8 +76,7 @@ describe('createSlackResources', () => {
     template.hasResourceProperties(
       'AWS::DynamoDB::Table',
       Match.objectLike({
-        TimeToLiveSpecification:
-          Match.absent(),
+        TimeToLiveSpecification: Match.absent(),
       }),
     );
   });
@@ -99,10 +85,8 @@ describe('createSlackResources', () => {
     template.hasResource(
       'AWS::SecretsManager::Secret',
       Match.objectLike({
-        DeletionPolicy:
-          'Delete',
-        UpdateReplacePolicy:
-          'Delete',
+        DeletionPolicy: 'Delete',
+        UpdateReplacePolicy: 'Delete',
       }),
     );
   });
@@ -111,23 +95,17 @@ describe('createSlackResources', () => {
     template.hasResource(
       'AWS::DynamoDB::Table',
       Match.objectLike({
-        DeletionPolicy:
-          'Delete',
-        UpdateReplacePolicy:
-          'Delete',
+        DeletionPolicy: 'Delete',
+        UpdateReplacePolicy: 'Delete',
       }),
     );
   });
 
   test('returns Slack client secret', () => {
-    expect(
-      resources.slackSecret,
-    ).toBeDefined();
+    expect(resources.slackSecret).toBeDefined();
   });
 
   test('returns Slack token table', () => {
-    expect(
-      resources.slackTokenTable,
-    ).toBeDefined();
+    expect(resources.slackTokenTable).toBeDefined();
   });
 });
