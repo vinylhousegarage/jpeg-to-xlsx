@@ -1,14 +1,14 @@
 import {
-  getCurrentUser,
-  signInWithRedirect,
-  signOut as amplifySignOut,
-} from 'aws-amplify/auth';
-import { Hub } from 'aws-amplify/utils';
-import {
   useCallback,
   useEffect,
   useState,
 } from 'react';
+
+import {
+  checkSession,
+  signOut as signOutSession,
+  startSignIn,
+} from './authClient';
 
 export type AuthStatus =
   | 'checking'
@@ -32,35 +32,23 @@ function toError(value: unknown): Error {
   return new Error('Authentication failed');
 }
 
-function isUnauthenticatedError(
-  error: unknown,
-): boolean {
-  return (
-    error instanceof Error &&
-    error.name === 'UserUnAuthenticatedException'
-  );
-}
-
 export function useAuth(): UseAuthResult {
   const [status, setStatus] =
     useState<AuthStatus>('checking');
   const [error, setError] =
     useState<Error | null>(null);
 
-  const checkSession = useCallback(async () => {
+  const refreshSession = useCallback(async () => {
     try {
-      await getCurrentUser();
+      const authenticated = await checkSession();
 
       setError(null);
-      setStatus('authenticated');
+      setStatus(
+        authenticated
+          ? 'authenticated'
+          : 'unauthenticated',
+      );
     } catch (sessionError) {
-      if (isUnauthenticatedError(sessionError)) {
-        setError(null);
-        setStatus('unauthenticated');
-
-        return;
-      }
-
       setError(toError(sessionError));
       setStatus('error');
     }
@@ -71,7 +59,7 @@ export function useAuth(): UseAuthResult {
     setStatus('redirecting');
 
     try {
-      await signInWithRedirect();
+      await startSignIn();
     } catch (signInError) {
       setError(toError(signInError));
       setStatus('error');
@@ -83,7 +71,8 @@ export function useAuth(): UseAuthResult {
     setStatus('checking');
 
     try {
-      await amplifySignOut();
+      await signOutSession();
+
       setStatus('unauthenticated');
     } catch (signOutError) {
       setError(toError(signOutError));
@@ -92,36 +81,8 @@ export function useAuth(): UseAuthResult {
   }, []);
 
   useEffect(() => {
-    const stopListening = Hub.listen(
-      'auth',
-      ({ payload }) => {
-        switch (payload.event) {
-          case 'signedIn':
-          case 'signInWithRedirect':
-            void checkSession();
-            break;
-
-          case 'signedOut':
-          case 'tokenRefresh_failure':
-            setError(null);
-            setStatus('unauthenticated');
-            break;
-
-          case 'signInWithRedirect_failure':
-            setError(toError(payload.data));
-            setStatus('error');
-            break;
-
-          default:
-            break;
-        }
-      },
-    );
-
-    void checkSession();
-
-    return stopListening;
-  }, [checkSession]);
+    void refreshSession();
+  }, [refreshSession]);
 
   return {
     status,

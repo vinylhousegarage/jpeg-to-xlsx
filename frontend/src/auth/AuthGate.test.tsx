@@ -17,6 +17,7 @@ import {
   test,
   vi,
 } from 'vitest';
+
 import { AuthGate } from './AuthGate';
 import type { AuthStatus } from './useAuth';
 
@@ -49,9 +50,7 @@ function createMockAuth({
   };
 }
 
-const TestContent = ({
-  children,
-}: PropsWithChildren) => {
+const TestContent = ({ children }: PropsWithChildren) => {
   return <div>{children}</div>;
 };
 
@@ -59,8 +58,6 @@ describe('AuthGate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // AuthGate内のリダイレクト重複防止状態を
-    // authenticatedにしてリセットする。
     mocks.useAuth.mockReturnValue(
       createMockAuth({
         status: 'authenticated',
@@ -79,7 +76,7 @@ describe('AuthGate', () => {
     vi.clearAllMocks();
   });
 
-  test('shows the spinner while checking the session', () => {
+  test('shows the spinner while checking the BFF session', () => {
     mocks.useAuth.mockReturnValue(
       createMockAuth({
         status: 'checking',
@@ -94,19 +91,12 @@ describe('AuthGate', () => {
       </AuthGate>,
     );
 
-    expect(
-      screen.getByText('処理中...'),
-    ).toBeDefined();
-
-    expect(
-      screen.queryByText('protected content'),
-    ).toBeNull();
+    expect(screen.getByText('処理中...')).toBeDefined();
+    expect(screen.queryByText('protected content')).toBeNull();
   });
 
-  test('shows the spinner while redirecting', () => {
-    const signIn = vi.fn().mockResolvedValue(
-      undefined,
-    );
+  test('shows the spinner while redirecting to login', () => {
+    const signIn = vi.fn().mockResolvedValue(undefined);
 
     mocks.useAuth.mockReturnValue(
       createMockAuth({
@@ -123,17 +113,13 @@ describe('AuthGate', () => {
       </AuthGate>,
     );
 
-    expect(
-      screen.getByText('処理中...'),
-    ).toBeDefined();
-
+    expect(screen.getByText('処理中...')).toBeDefined();
     expect(signIn).not.toHaveBeenCalled();
+    expect(screen.queryByText('protected content')).toBeNull();
   });
 
-  test('starts managed login when unauthenticated', async () => {
-    const signIn = vi.fn().mockResolvedValue(
-      undefined,
-    );
+  test('starts BFF login when unauthenticated', async () => {
+    const signIn = vi.fn().mockResolvedValue(undefined);
 
     mocks.useAuth.mockReturnValue(
       createMockAuth({
@@ -154,19 +140,12 @@ describe('AuthGate', () => {
       expect(signIn).toHaveBeenCalledOnce();
     });
 
-    expect(
-      screen.getByText('処理中...'),
-    ).toBeDefined();
-
-    expect(
-      screen.queryByText('protected content'),
-    ).toBeNull();
+    expect(screen.getByText('処理中...')).toBeDefined();
+    expect(screen.queryByText('protected content')).toBeNull();
   });
 
-  test('does not start duplicate redirects in StrictMode', async () => {
-    const signIn = vi.fn().mockResolvedValue(
-      undefined,
-    );
+  test('does not start duplicate login redirects in StrictMode', async () => {
+    const signIn = vi.fn().mockResolvedValue(undefined);
 
     mocks.useAuth.mockReturnValue(
       createMockAuth({
@@ -205,19 +184,12 @@ describe('AuthGate', () => {
       </AuthGate>,
     );
 
-    expect(
-      screen.getByText('protected content'),
-    ).toBeDefined();
-
-    expect(
-      screen.queryByText('処理中...'),
-    ).toBeNull();
+    expect(screen.getByText('protected content')).toBeDefined();
+    expect(screen.queryByText('処理中...')).toBeNull();
   });
 
   test('shows an authentication error', () => {
-    const authError = new Error(
-      'OAuth callback failed',
-    );
+    const authError = new Error('Session check failed');
 
     mocks.useAuth.mockReturnValue(
       createMockAuth({
@@ -234,32 +206,18 @@ describe('AuthGate', () => {
       </AuthGate>,
     );
 
-    expect(
-      screen.getByText('認証エラー'),
-    ).toBeDefined();
-
-    expect(
-      screen.getByText(
-        'OAuth callback failed',
-      ),
-    ).toBeDefined();
-
-    expect(
-      screen.queryByText('protected content'),
-    ).toBeNull();
+    expect(screen.getByText('認証エラー')).toBeDefined();
+    expect(screen.getByText('Session check failed')).toBeDefined();
+    expect(screen.queryByText('protected content')).toBeNull();
   });
 
-  test('retries managed login after an error', () => {
-    const signIn = vi.fn().mockResolvedValue(
-      undefined,
-    );
+  test('retries BFF login after an error', () => {
+    const signIn = vi.fn().mockResolvedValue(undefined);
 
     mocks.useAuth.mockReturnValue(
       createMockAuth({
         status: 'error',
-        error: new Error(
-          'OAuth callback failed',
-        ),
+        error: new Error('Session check failed'),
         signIn,
       }),
     );
@@ -272,11 +230,9 @@ describe('AuthGate', () => {
       </AuthGate>,
     );
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: '再試行',
-      }),
-    );
+    fireEvent.click(screen.getByRole('button', {
+      name: '再試行',
+    }));
 
     expect(signIn).toHaveBeenCalledOnce();
   });

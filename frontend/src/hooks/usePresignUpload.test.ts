@@ -75,9 +75,10 @@ describe('usePresignUpload', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
 
     expect(fetch).toHaveBeenCalledWith(
-      `${window.location.origin}/api/storage/upload`,
+      '/api/storage/upload',
       {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

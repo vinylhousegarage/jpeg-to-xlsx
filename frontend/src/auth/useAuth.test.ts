@@ -15,167 +15,121 @@ import {
 import { useAuth } from './useAuth';
 
 const mocks = vi.hoisted(() => ({
-  getCurrentUser: vi.fn(),
-  signInWithRedirect: vi.fn(),
-  amplifySignOut: vi.fn(),
-  hubListen: vi.fn(),
+  checkSession: vi.fn(),
+  startSignIn: vi.fn(),
+  signOut: vi.fn(),
 }));
 
-vi.mock('aws-amplify/auth', () => ({
-  getCurrentUser: mocks.getCurrentUser,
-  signInWithRedirect: mocks.signInWithRedirect,
-  signOut: mocks.amplifySignOut,
+vi.mock('./authClient', () => ({
+  checkSession: mocks.checkSession,
+  startSignIn: mocks.startSignIn,
+  signOut: mocks.signOut,
 }));
-
-vi.mock('aws-amplify/utils', () => ({
-  Hub: {
-    listen: mocks.hubListen,
-  },
-}));
-
-type AuthHubEvent = {
-  payload: {
-    event: string;
-    data?: unknown;
-  };
-};
-
-type AuthHubCallback = (
-  event: AuthHubEvent,
-) => void;
 
 describe('useAuth', () => {
-  let authHubCallback:
-    | AuthHubCallback
-    | undefined;
-  let stopListening: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
     vi.clearAllMocks();
 
-    authHubCallback = undefined;
-    stopListening = vi.fn();
-
-    mocks.hubListen.mockImplementation(
-      (
-        _channel: string,
-        callback: AuthHubCallback,
-      ) => {
-        authHubCallback = callback;
-
-        return stopListening;
-      },
-    );
+    mocks.checkSession.mockResolvedValue(false);
+    mocks.startSignIn.mockResolvedValue(undefined);
+    mocks.signOut.mockResolvedValue(undefined);
   });
 
-  test('sets authenticated when a current user exists', async () => {
-    mocks.getCurrentUser.mockResolvedValue({
-      userId: 'test-user-id',
-      username: 'test-user',
-    });
+  test('sets authenticated when the BFF session is valid', async () => {
+    mocks.checkSession.mockResolvedValue(true);
 
-    const { result } = renderHook(() => useAuth());
+    const { result } = renderHook(
+      () => useAuth(),
+    );
 
     expect(result.current.status).toBe('checking');
 
     await waitFor(() => {
-      expect(result.current.status).toBe(
-        'authenticated',
-      );
+      expect(result.current.status).toBe('authenticated');
     });
 
     expect(result.current.error).toBeNull();
-    expect(mocks.getCurrentUser).toHaveBeenCalledOnce();
-    expect(mocks.hubListen).toHaveBeenCalledWith(
-      'auth',
-      expect.any(Function),
-    );
+
+    expect(mocks.checkSession).toHaveBeenCalledOnce();
   });
 
-  test('sets unauthenticated when a current user does not exist', async () => {
-    const unauthenticatedError = new Error(
-      'User is not authenticated',
+  test('sets unauthenticated when the BFF session is invalid', async () => {
+    mocks.checkSession.mockResolvedValue(false);
+
+    const { result } = renderHook(
+      () => useAuth(),
     );
-
-    unauthenticatedError.name =
-      'UserUnAuthenticatedException';
-
-    mocks.getCurrentUser.mockRejectedValue(
-      unauthenticatedError,
-    );
-
-    const { result } = renderHook(() => useAuth());
 
     await waitFor(() => {
-      expect(result.current.status).toBe(
-        'unauthenticated',
-      );
+      expect(result.current.status).toBe('unauthenticated');
     });
 
     expect(result.current.error).toBeNull();
+
+    expect(mocks.checkSession).toHaveBeenCalledOnce();
   });
 
-  test('starts the managed login redirect', async () => {
-    const unauthenticatedError = new Error(
-      'User is not authenticated',
-    );
+  test('sets error when the session check fails', async () => {
+    const sessionError = new Error('Session check failed');
 
-    unauthenticatedError.name =
-      'UserUnAuthenticatedException';
+    mocks.checkSession.mockRejectedValue(sessionError);
 
-    mocks.getCurrentUser.mockRejectedValue(
-      unauthenticatedError,
+    const { result } = renderHook(
+      () => useAuth(),
     );
-    mocks.signInWithRedirect.mockResolvedValue(
-      undefined,
-    );
-
-    const { result } = renderHook(() => useAuth());
 
     await waitFor(() => {
-      expect(result.current.status).toBe(
-        'unauthenticated',
-      );
+      expect(result.current.status).toBe('error');
+    });
+
+    expect(result.current.error).toBe(sessionError);
+  });
+
+  test('converts a non-Error session failure', async () => {
+    mocks.checkSession.mockRejectedValue('Session check failed');
+
+    const { result } = renderHook(
+      () => useAuth(),
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error');
+    });
+
+    expect(result.current.error).toEqual(new Error('Authentication failed'));
+  });
+
+  test('starts the BFF login redirect', async () => {
+    const { result } = renderHook(
+      () => useAuth(),
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('unauthenticated');
     });
 
     await act(async () => {
       await result.current.signIn();
     });
 
-    expect(
-      mocks.signInWithRedirect,
-    ).toHaveBeenCalledOnce();
+    expect(mocks.startSignIn).toHaveBeenCalledOnce();
 
-    expect(result.current.status).toBe(
-      'redirecting',
-    );
+    expect(result.current.status).toBe('redirecting');
+
     expect(result.current.error).toBeNull();
   });
 
-  test('sets error when the managed login redirect fails', async () => {
-    const unauthenticatedError = new Error(
-      'User is not authenticated',
-    );
-    const redirectError = new Error(
-      'Redirect failed',
-    );
+  test('sets error when the BFF login redirect fails', async () => {
+    const redirectError = new Error('Login redirect failed');
 
-    unauthenticatedError.name =
-      'UserUnAuthenticatedException';
+    mocks.startSignIn.mockRejectedValue(redirectError);
 
-    mocks.getCurrentUser.mockRejectedValue(
-      unauthenticatedError,
+    const { result } = renderHook(
+      () => useAuth(),
     );
-    mocks.signInWithRedirect.mockRejectedValue(
-      redirectError,
-    );
-
-    const { result } = renderHook(() => useAuth());
 
     await waitFor(() => {
-      expect(result.current.status).toBe(
-        'unauthenticated',
-      );
+      expect(result.current.status).toBe('unauthenticated');
     });
 
     await act(async () => {
@@ -183,150 +137,52 @@ describe('useAuth', () => {
     });
 
     expect(result.current.status).toBe('error');
-    expect(result.current.error).toBe(
-      redirectError,
-    );
+
+    expect(result.current.error).toBe(redirectError);
   });
 
-  test('checks the session after a signed-in event', async () => {
-    const unauthenticatedError = new Error(
-      'User is not authenticated',
+  test('signs out the BFF session', async () => {
+    mocks.checkSession.mockResolvedValue(true);
+
+    const { result } = renderHook(
+      () => useAuth(),
     );
-
-    unauthenticatedError.name =
-      'UserUnAuthenticatedException';
-
-    mocks.getCurrentUser
-      .mockRejectedValueOnce(
-        unauthenticatedError,
-      )
-      .mockResolvedValueOnce({
-        userId: 'test-user-id',
-        username: 'test-user',
-      });
-
-    const { result } = renderHook(() => useAuth());
 
     await waitFor(() => {
-      expect(result.current.status).toBe(
-        'unauthenticated',
-      );
-    });
-
-    if (!authHubCallback) {
-      throw new Error(
-        'Auth Hub callback was not registered',
-      );
-    }
-
-    act(() => {
-      authHubCallback?.({
-        payload: {
-          event: 'signedIn',
-        },
-      });
-    });
-
-    await waitFor(() => {
-      expect(result.current.status).toBe(
-        'authenticated',
-      );
-    });
-
-    expect(mocks.getCurrentUser).toHaveBeenCalledTimes(
-      2,
-    );
-  });
-
-  test('sets error after a redirect failure event', async () => {
-    mocks.getCurrentUser.mockResolvedValue({
-      userId: 'test-user-id',
-      username: 'test-user',
-    });
-
-    const { result } = renderHook(() => useAuth());
-
-    await waitFor(() => {
-      expect(result.current.status).toBe(
-        'authenticated',
-      );
-    });
-
-    if (!authHubCallback) {
-      throw new Error(
-        'Auth Hub callback was not registered',
-      );
-    }
-
-    const redirectError = new Error(
-      'OAuth callback failed',
-    );
-
-    act(() => {
-      authHubCallback?.({
-        payload: {
-          event:
-            'signInWithRedirect_failure',
-          data: redirectError,
-        },
-      });
-    });
-
-    expect(result.current.status).toBe('error');
-    expect(result.current.error).toBe(
-      redirectError,
-    );
-  });
-
-  test('signs out the current user', async () => {
-    mocks.getCurrentUser.mockResolvedValue({
-      userId: 'test-user-id',
-      username: 'test-user',
-    });
-    mocks.amplifySignOut.mockResolvedValue(
-      undefined,
-    );
-
-    const { result } = renderHook(() => useAuth());
-
-    await waitFor(() => {
-      expect(result.current.status).toBe(
-        'authenticated',
-      );
+      expect(result.current.status).toBe('authenticated');
     });
 
     await act(async () => {
       await result.current.signOut();
     });
 
-    expect(
-      mocks.amplifySignOut,
-    ).toHaveBeenCalledOnce();
+    expect(mocks.signOut).toHaveBeenCalledOnce();
 
-    expect(result.current.status).toBe(
-      'unauthenticated',
-    );
+    expect(result.current.status).toBe('unauthenticated');
+
     expect(result.current.error).toBeNull();
   });
 
-  test('stops listening to auth events when unmounted', async () => {
-    mocks.getCurrentUser.mockResolvedValue({
-      userId: 'test-user-id',
-      username: 'test-user',
-    });
+  test('sets error when signing out fails', async () => {
+    const signOutError = new Error('Sign out failed');
 
-    const { result, unmount } = renderHook(
+    mocks.checkSession.mockResolvedValue(true);
+    mocks.signOut.mockRejectedValue(signOutError);
+
+    const { result } = renderHook(
       () => useAuth(),
     );
 
     await waitFor(() => {
-      expect(result.current.status).toBe(
-        'authenticated',
-      );
+      expect(result.current.status).toBe('authenticated');
     });
 
-    unmount();
+    await act(async () => {
+      await result.current.signOut();
+    });
 
-    expect(stopListening).toHaveBeenCalledOnce();
+    expect(result.current.status).toBe('error');
+
+    expect(result.current.error).toBe(signOutError);
   });
 });

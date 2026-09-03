@@ -58,13 +58,8 @@ export const Main = () => {
   }, [dispatch]);
 
   const handleConnectSlack = () => {
-    const apiBaseURL = (
-      import.meta.env.VITE_API_BASE_URL ||
-      window.location.origin
-    ).replace(/\/$/, '');
-
     window.location.assign(
-      `${apiBaseURL}/api/oauth/slack/login`,
+      '/api/oauth/slack/login',
     );
   };
 
