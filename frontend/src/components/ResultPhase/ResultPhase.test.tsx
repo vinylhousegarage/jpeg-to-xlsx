@@ -1,12 +1,50 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { ResultPhase } from './ResultPhase';
+import {
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
 import type {
   AppAction,
   ResultPhase as ResultPhaseState,
 } from '../../types';
+import { ResultPhase } from './ResultPhase';
+
+const mocks = vi.hoisted(() => ({
+  useAuthContext: vi.fn(),
+}));
+
+vi.mock('../../auth/AuthContext', () => ({
+  useAuthContext: mocks.useAuthContext,
+}));
 
 describe('ResultPhase', () => {
+  const signIn = vi.fn();
+  const signOut = vi.fn();
+
+  beforeEach(() => {
+    mocks.useAuthContext.mockReset();
+    signIn.mockReset();
+    signOut.mockReset();
+
+    signIn.mockResolvedValue(undefined);
+    signOut.mockResolvedValue(undefined);
+
+    mocks.useAuthContext.mockReturnValue({
+      status: 'authenticated',
+      error: null,
+      signIn,
+      signOut,
+    });
+  });
+
   it('renders SuccessDisplay when status is success', () => {
     const dispatch = vi.fn();
     const state: ResultPhaseState = {
@@ -59,7 +97,9 @@ describe('ResultPhase', () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText('画像の送信に失敗しました'),
+      screen.getByText(
+        '画像の送信に失敗しました',
+      ),
     ).toBeInTheDocument();
 
     expect(
@@ -90,10 +130,13 @@ describe('ResultPhase', () => {
       }),
     );
 
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledOnce();
+
     expect(dispatch).toHaveBeenCalledWith({
       type: 'CONTINUE',
     } satisfies AppAction);
+
+    expect(signOut).not.toHaveBeenCalled();
   });
 
   it('dispatches CONTINUE when the retake button is clicked', () => {
@@ -102,7 +145,9 @@ describe('ResultPhase', () => {
       type: 'result',
       shotNumber: 'SHOT-001',
       status: 'error',
-      error: new Error('画像の送信に失敗しました'),
+      error: new Error(
+        '画像の送信に失敗しました',
+      ),
     };
 
     render(
@@ -118,52 +163,68 @@ describe('ResultPhase', () => {
       }),
     );
 
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledOnce();
+
     expect(dispatch).toHaveBeenCalledWith({
       type: 'CONTINUE',
     } satisfies AppAction);
   });
 
-  it.each([
-    {
-      status: 'success' as const,
-      buttonName: '終了',
-    },
-    {
-      status: 'error' as const,
-      buttonName: '終了',
-    },
-  ])(
-    'dispatches EXIT from the $status result',
-    ({ status, buttonName }) => {
-      const dispatch = vi.fn();
-      const state: ResultPhaseState = {
-        type: 'result',
-        shotNumber: 'SHOT-001',
-        status,
-        error:
-          status === 'error'
-            ? new Error('画像の送信に失敗しました')
-            : undefined,
-      };
+  it('signs out when the logout button is clicked', () => {
+    const dispatch = vi.fn();
+    const state: ResultPhaseState = {
+      type: 'result',
+      shotNumber: 'SHOT-001',
+      status: 'success',
+    };
 
-      render(
-        <ResultPhase
-          state={state}
-          dispatch={dispatch}
-        />,
-      );
+    render(
+      <ResultPhase
+        state={state}
+        dispatch={dispatch}
+      />,
+    );
 
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: buttonName,
-        }),
-      );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'ログアウト',
+      }),
+    );
 
-      expect(dispatch).toHaveBeenCalledTimes(1);
-      expect(dispatch).toHaveBeenCalledWith({
-        type: 'EXIT',
-      } satisfies AppAction);
-    },
-  );
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('dispatches EXIT from the error result', () => {
+    const dispatch = vi.fn();
+    const state: ResultPhaseState = {
+      type: 'result',
+      shotNumber: 'SHOT-001',
+      status: 'error',
+      error: new Error(
+        '画像の送信に失敗しました',
+      ),
+    };
+
+    render(
+      <ResultPhase
+        state={state}
+        dispatch={dispatch}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: '終了',
+      }),
+    );
+
+    expect(dispatch).toHaveBeenCalledOnce();
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'EXIT',
+    } satisfies AppAction);
+
+    expect(signOut).not.toHaveBeenCalled();
+  });
 });

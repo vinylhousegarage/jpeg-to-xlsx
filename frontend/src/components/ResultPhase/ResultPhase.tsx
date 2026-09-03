@@ -1,5 +1,10 @@
 import { Dispatch } from 'react';
-import { AppAction, ResultPhase as ResultPhaseState } from '../../types';
+
+import { useAuthContext } from '../../auth/AuthContext';
+import {
+  AppAction,
+  ResultPhase as ResultPhaseState,
+} from '../../types';
 import { ErrorDisplay } from './ErrorDisplay';
 import { SuccessDisplay } from './SuccessDisplay';
 
@@ -12,8 +17,14 @@ export const ResultPhase = ({
   state,
   dispatch,
 }: Props) => {
+  const { signOut } = useAuthContext();
+
   const handleContinue = () => {
     dispatch({ type: 'CONTINUE' });
+  };
+
+  const handleLogout = () => {
+    void signOut();
   };
 
   const handleExit = () => {
@@ -24,7 +35,7 @@ export const ResultPhase = ({
     return (
       <SuccessDisplay
         onContinue={handleContinue}
-        onExit={handleExit}
+        onLogout={handleLogout}
       />
     );
   }

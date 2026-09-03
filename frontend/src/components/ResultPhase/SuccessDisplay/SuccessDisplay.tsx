@@ -2,12 +2,12 @@ import { standardButtonStyle } from '../../../styles/button';
 
 type Props = {
   onContinue: () => void;
-  onExit: () => void;
+  onLogout: () => void;
 };
 
 export const SuccessDisplay: React.FC<Props> = ({
   onContinue,
-  onExit,
+  onLogout,
 }) => {
   return (
     <div
@@ -38,10 +38,10 @@ export const SuccessDisplay: React.FC<Props> = ({
 
         <button
           type="button"
-          onClick={onExit}
+          onClick={onLogout}
           style={standardButtonStyle}
         >
-          終了
+          ログアウト
         </button>
       </div>
     </div>

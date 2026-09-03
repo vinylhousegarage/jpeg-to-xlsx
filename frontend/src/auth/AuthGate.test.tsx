@@ -22,11 +22,11 @@ import { AuthGate } from './AuthGate';
 import type { AuthStatus } from './useAuth';
 
 const mocks = vi.hoisted(() => ({
-  useAuth: vi.fn(),
+  useAuthContext: vi.fn(),
 }));
 
-vi.mock('./useAuth', () => ({
-  useAuth: mocks.useAuth,
+vi.mock('./AuthContext', () => ({
+  useAuthContext: mocks.useAuthContext,
 }));
 
 type MockAuthOptions = {
@@ -50,15 +50,15 @@ function createMockAuth({
   };
 }
 
-const TestContent = ({ children }: PropsWithChildren) => {
+const TestContent = ({
+  children,
+}: PropsWithChildren) => {
   return <div>{children}</div>;
 };
 
 describe('AuthGate', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'authenticated',
       }),
@@ -77,7 +77,7 @@ describe('AuthGate', () => {
   });
 
   test('shows the spinner while checking the BFF session', () => {
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'checking',
       }),
@@ -98,7 +98,7 @@ describe('AuthGate', () => {
   test('shows the spinner while redirecting to login', () => {
     const signIn = vi.fn().mockResolvedValue(undefined);
 
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'redirecting',
         signIn,
@@ -121,7 +121,7 @@ describe('AuthGate', () => {
   test('starts BFF login when unauthenticated', async () => {
     const signIn = vi.fn().mockResolvedValue(undefined);
 
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'unauthenticated',
         signIn,
@@ -147,7 +147,7 @@ describe('AuthGate', () => {
   test('does not start duplicate login redirects in StrictMode', async () => {
     const signIn = vi.fn().mockResolvedValue(undefined);
 
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'unauthenticated',
         signIn,
@@ -170,7 +170,7 @@ describe('AuthGate', () => {
   });
 
   test('shows children when authenticated', () => {
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'authenticated',
       }),
@@ -191,7 +191,7 @@ describe('AuthGate', () => {
   test('shows an authentication error', () => {
     const authError = new Error('Session check failed');
 
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'error',
         error: authError,
@@ -214,7 +214,7 @@ describe('AuthGate', () => {
   test('retries BFF login after an error', () => {
     const signIn = vi.fn().mockResolvedValue(undefined);
 
-    mocks.useAuth.mockReturnValue(
+    mocks.useAuthContext.mockReturnValue(
       createMockAuth({
         status: 'error',
         error: new Error('Session check failed'),
