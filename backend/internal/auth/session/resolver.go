@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -118,19 +119,34 @@ func (
 	rawSessionID, err :=
 		resolver.cookieReader.Read(request)
 	if err != nil {
+		if errors.Is(
+			err,
+			http.ErrNoCookie,
+		) {
+			return Session{}, fmt.Errorf(
+				"resolve session: read cookie: %w",
+				ErrUnauthenticated,
+			)
+		}
+
 		return Session{}, fmt.Errorf(
 			"resolve session: read cookie: %w",
 			err,
 		)
 	}
 
-	if strings.TrimSpace(rawSessionID) == "" {
+	if strings.TrimSpace(
+		rawSessionID,
+	) == "" {
 		return Session{}, fmt.Errorf(
-			"resolve session: session ID is empty",
+			"resolve session: session ID is empty: %w",
+			ErrUnauthenticated,
 		)
 	}
 
-	idHash, err := HashID(rawSessionID)
+	idHash, err := HashID(
+		rawSessionID,
+	)
 	if err != nil {
 		return Session{}, fmt.Errorf(
 			"resolve session: hash session ID: %w",
@@ -138,11 +154,22 @@ func (
 		)
 	}
 
-	sessionValue, err := resolver.store.Get(
-		ctx,
-		idHash,
-	)
+	sessionValue, err :=
+		resolver.store.Get(
+			ctx,
+			idHash,
+		)
 	if err != nil {
+		if errors.Is(
+			err,
+			ErrNotFound,
+		) {
+			return Session{}, fmt.Errorf(
+				"resolve session: get session: %w",
+				ErrUnauthenticated,
+			)
+		}
+
 		return Session{}, fmt.Errorf(
 			"resolve session: get session: %w",
 			err,
@@ -153,7 +180,8 @@ func (
 		sessionValue.ExpiresAt,
 	) {
 		return Session{}, fmt.Errorf(
-			"resolve session: session is expired",
+			"resolve session: session is expired: %w",
+			ErrUnauthenticated,
 		)
 	}
 

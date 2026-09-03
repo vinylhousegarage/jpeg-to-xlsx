@@ -25,6 +25,16 @@ func TestSetupRoutesRejectsHEAD(
 			allowedMethod: http.MethodGet,
 		},
 		{
+			name:          "authentication session",
+			path:          "/api/auth/session",
+			allowedMethod: http.MethodGet,
+		},
+		{
+			name:          "authentication logout",
+			path:          "/api/auth/logout",
+			allowedMethod: http.MethodPost,
+		},
+		{
 			name:          "Slack login",
 			path:          "/api/oauth/slack/login",
 			allowedMethod: http.MethodGet,

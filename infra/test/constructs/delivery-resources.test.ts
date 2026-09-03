@@ -91,6 +91,26 @@ describe('createDeliveryResources', () => {
     );
   });
 
+  test('creates authentication session route', () => {
+    template.hasResourceProperties(
+      'AWS::ApiGatewayV2::Route',
+      Match.objectLike({
+        RouteKey: 'GET /api/auth/session',
+        Target: Match.anyValue(),
+      }),
+    );
+  });
+
+  test('creates authentication logout route', () => {
+    template.hasResourceProperties(
+      'AWS::ApiGatewayV2::Route',
+      Match.objectLike({
+        RouteKey: 'POST /api/auth/logout',
+        Target: Match.anyValue(),
+      }),
+    );
+  });
+
   test('creates Slack login route', () => {
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Route',
@@ -121,11 +141,8 @@ describe('createDeliveryResources', () => {
     );
   });
 
-  test('creates five API routes', () => {
-    template.resourceCountIs(
-      'AWS::ApiGatewayV2::Route',
-      5,
-    );
+  test('creates seven API routes', () => {
+    template.resourceCountIs('AWS::ApiGatewayV2::Route', 7);
   });
 
   test('creates HTTP API default stage', () => {
@@ -155,10 +172,7 @@ describe('createDeliveryResources', () => {
   });
 
   test('creates CloudFront distribution', () => {
-    template.resourceCountIs(
-      'AWS::CloudFront::Distribution',
-      1,
-    );
+    template.resourceCountIs('AWS::CloudFront::Distribution', 1);
 
     template.hasResourceProperties(
       'AWS::CloudFront::Distribution',
@@ -213,10 +227,7 @@ describe('createDeliveryResources', () => {
   });
 
   test('creates origin access control', () => {
-    template.resourceCountIs(
-      'AWS::CloudFront::OriginAccessControl',
-      1,
-    );
+    template.resourceCountIs('AWS::CloudFront::OriginAccessControl', 1);
 
     template.hasResourceProperties(
       'AWS::CloudFront::OriginAccessControl',

@@ -1,13 +1,6 @@
 package session
 
-import (
-	"context"
-	"errors"
-)
-
-var ErrNotFound = errors.New(
-	"session not found",
-)
+import "context"
 
 type Store interface {
 	Save(
