@@ -58,6 +58,22 @@ export const createDeliveryResources = (
     integration: apiIntegration,
   });
 
+  // セッション状態確認
+
+  api.addRoutes({
+    path: '/api/auth/session',
+    methods: [apigwv2.HttpMethod.GET],
+    integration: apiIntegration,
+  });
+
+  // ログアウト
+
+  api.addRoutes({
+    path: '/api/auth/logout',
+    methods: [apigwv2.HttpMethod.POST],
+    integration: apiIntegration,
+  });
+
   // Slack OAuthログイン
 
   api.addRoutes({
