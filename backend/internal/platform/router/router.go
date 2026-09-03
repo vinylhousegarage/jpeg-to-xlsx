@@ -6,18 +6,24 @@ func SetupRoutes(
 	mux *http.ServeMux,
 	authLoginHandler http.Handler,
 	authCallbackHandler http.Handler,
+	authSessionHandler http.Handler,
+	authLogoutHandler http.Handler,
 	slackLoginHandler http.Handler,
 	slackCallbackHandler http.Handler,
 	storageHandler http.Handler,
 ) {
 	mux.Handle("HEAD /api/auth/login", methodNotAllowed(http.MethodGet))
 	mux.Handle("HEAD /api/auth/callback", methodNotAllowed(http.MethodGet))
+	mux.Handle("HEAD /api/auth/session", methodNotAllowed(http.MethodGet))
+	mux.Handle("HEAD /api/auth/logout", methodNotAllowed(http.MethodPost))
 	mux.Handle("HEAD /api/oauth/slack/login", methodNotAllowed(http.MethodGet))
 	mux.Handle("HEAD /api/oauth/slack/callback", methodNotAllowed(http.MethodGet))
 	mux.Handle("HEAD /api/storage/upload", methodNotAllowed(http.MethodPost))
 
 	mux.Handle("GET /api/auth/login", authLoginHandler)
 	mux.Handle("GET /api/auth/callback", authCallbackHandler)
+	mux.Handle("GET /api/auth/session", authSessionHandler)
+	mux.Handle("POST /api/auth/logout", authLogoutHandler)
 	mux.Handle("GET /api/oauth/slack/login", slackLoginHandler)
 	mux.Handle("GET /api/oauth/slack/callback", slackCallbackHandler)
 	mux.Handle("POST /api/storage/upload", storageHandler)

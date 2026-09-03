@@ -7,6 +7,10 @@ const (
 
 	testAuthCallbackResponse = "auth callback"
 
+	testAuthSessionResponse = "auth session"
+
+	testAuthLogoutResponse = "auth logout"
+
 	testSlackLoginResponse = "slack login"
 
 	testSlackCallbackResponse = "slack callback"
@@ -25,6 +29,14 @@ func newTestRouter() *http.ServeMux {
 		testAuthCallbackResponse,
 	)
 
+	authSessionHandler := newTestHandler(
+		testAuthSessionResponse,
+	)
+
+	authLogoutHandler := newTestHandler(
+		testAuthLogoutResponse,
+	)
+
 	slackLoginHandler := newTestHandler(
 		testSlackLoginResponse,
 	)
@@ -41,6 +53,8 @@ func newTestRouter() *http.ServeMux {
 		mux,
 		authLoginHandler,
 		authCallbackHandler,
+		authSessionHandler,
+		authLogoutHandler,
 		slackLoginHandler,
 		slackCallbackHandler,
 		storageHandler,

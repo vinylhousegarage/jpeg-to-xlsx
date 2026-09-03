@@ -30,13 +30,10 @@ func main() {
 		)
 	}
 
-	awsConfig, err :=
-		awsconfig.LoadDefaultConfig(
-			ctx,
-			awsconfig.WithRegion(
-				cfg.AWS.Region,
-			),
-		)
+	awsConfig, err := awsconfig.LoadDefaultConfig(
+		ctx,
+		awsconfig.WithRegion(cfg.AWS.Region),
+	)
 	if err != nil {
 		log.Fatalf(
 			"failed to load AWS config: %v",
@@ -54,31 +51,16 @@ func main() {
 		)
 	}
 
-	baseS3Client := s3.NewFromConfig(
-		awsConfig,
+	baseS3Client := s3.NewFromConfig(awsConfig)
+	dynamoDBClient := dynamodb.NewFromConfig(awsConfig)
+	secretsManagerClient := awssecretsmanager.NewFromConfig(awsConfig)
+	secretLoader := platformsecretsmanager.NewLoader(secretsManagerClient)
+
+	storageHandler, err := buildStorageHandler(
+		cfg.Storage,
+		baseS3Client,
+		appLogger,
 	)
-
-	dynamoDBClient :=
-		dynamodb.NewFromConfig(
-			awsConfig,
-		)
-
-	secretsManagerClient :=
-		awssecretsmanager.NewFromConfig(
-			awsConfig,
-		)
-
-	secretLoader :=
-		platformsecretsmanager.NewLoader(
-			secretsManagerClient,
-		)
-
-	storageHandler, err :=
-		buildStorageHandler(
-			cfg.Storage,
-			baseS3Client,
-			appLogger,
-		)
 	if err != nil {
 		appLogger.Fatal(
 			"Failed to build storage handler",
@@ -86,13 +68,12 @@ func main() {
 		)
 	}
 
-	authHandlerSet, err :=
-		buildAuthHandlers(
-			ctx,
-			cfg.Auth,
-			dynamoDBClient,
-			secretLoader,
-		)
+	authHandlerSet, err := buildAuthHandlers(
+		ctx,
+		cfg.Auth,
+		dynamoDBClient,
+		secretLoader,
+	)
 	if err != nil {
 		appLogger.Fatal(
 			"Failed to build authentication handlers",
@@ -100,15 +81,14 @@ func main() {
 		)
 	}
 
-	slackHandlerSet, err :=
-		buildSlackHandlers(
-			ctx,
-			cfg.Slack,
-			cfg.App.CookieSecure,
-			dynamoDBClient,
-			secretLoader,
-			appLogger,
-		)
+	slackHandlerSet, err := buildSlackHandlers(
+		ctx,
+		cfg.Slack,
+		cfg.App.CookieSecure,
+		dynamoDBClient,
+		secretLoader,
+		appLogger,
+	)
 	if err != nil {
 		appLogger.Fatal(
 			"Failed to build Slack handlers",
@@ -122,34 +102,24 @@ func main() {
 		mux,
 		authHandlerSet.login,
 		authHandlerSet.callback,
+		authHandlerSet.sessionStatus,
+		authHandlerSet.logout,
 		slackHandlerSet.login,
 		slackHandlerSet.callback,
 		storageHandler,
 	)
 
-	appLogger.Info(
-		"Application successfully initialized",
-	)
+	appLogger.Info("Application successfully initialized")
 
 	if cfg.AWS.IsLambda {
-		appLogger.Info(
-			"Starting server on AWS Lambda",
-		)
-
-		adapter := httpadapter.NewV2(
-			mux,
-		)
-
-		lambda.Start(
-			adapter.ProxyWithContext,
-		)
+		appLogger.Info("Starting server on AWS Lambda")
+		adapter := httpadapter.NewV2(mux)
+		lambda.Start(adapter.ProxyWithContext)
 
 		return
 	}
 
-	appLogger.Info(
-		"Starting local server on :8080",
-	)
+	appLogger.Info("Starting local server on :8080")
 
 	server := &http.Server{
 		Addr:    ":8080",

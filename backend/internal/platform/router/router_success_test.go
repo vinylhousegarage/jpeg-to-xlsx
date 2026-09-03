@@ -28,6 +28,18 @@ func TestSetupRoutes(
 			response: testAuthCallbackResponse,
 		},
 		{
+			name:     "authentication session",
+			method:   http.MethodGet,
+			path:     "/api/auth/session",
+			response: testAuthSessionResponse,
+		},
+		{
+			name:     "authentication logout",
+			method:   http.MethodPost,
+			path:     "/api/auth/logout",
+			response: testAuthLogoutResponse,
+		},
+		{
 			name:     "Slack login",
 			method:   http.MethodGet,
 			path:     "/api/oauth/slack/login",

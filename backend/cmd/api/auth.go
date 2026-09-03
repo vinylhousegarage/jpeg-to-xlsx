@@ -12,13 +12,17 @@ import (
 	authlogin "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/cognito/login"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/cognito/oauthstate"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session"
+	authlogout "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session/logout"
+	authstatus "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session/status"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/config"
 	platformsecretsmanager "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/secretsmanager"
 )
 
 type authHandlers struct {
-	login    http.Handler
-	callback http.Handler
+	login         http.Handler
+	callback      http.Handler
+	sessionStatus http.Handler
+	logout        http.Handler
 }
 
 func buildAuthHandlers(
@@ -48,11 +52,10 @@ func buildAuthHandlers(
 		)
 	}
 
-	clientSecret, err :=
-		secretLoader.LoadClientSecret(
-			ctx,
-			authConfig.CognitoClientSecretARN,
-		)
+	clientSecret, err := secretLoader.LoadClientSecret(
+		ctx,
+		authConfig.CognitoClientSecretARN,
+	)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
 			"build authentication handlers: load Cognito client secret: %w",
@@ -62,12 +65,11 @@ func buildAuthHandlers(
 
 	cognitoClient, err := cognito.NewClient(
 		cognito.Config{
-			ClientID:     authConfig.CognitoClientID,
-			ClientSecret: clientSecret,
-			AuthorizationEndpoint: authConfig.
-				CognitoAuthorizationEndpoint,
-			TokenEndpoint: authConfig.CognitoTokenEndpoint,
-			RedirectURI:   authConfig.CognitoRedirectURI,
+			ClientID:              authConfig.CognitoClientID,
+			ClientSecret:          clientSecret,
+			AuthorizationEndpoint: authConfig.CognitoAuthorizationEndpoint,
+			TokenEndpoint:         authConfig.CognitoTokenEndpoint,
+			RedirectURI:           authConfig.CognitoRedirectURI,
 			Scopes: []string{
 				"openid",
 				"email",
@@ -96,10 +98,7 @@ func buildAuthHandlers(
 		)
 	}
 
-	stateGenerator, err :=
-		oauthstate.NewGenerator(
-			authConfig.OAuthStateTTL,
-		)
+	stateGenerator, err := oauthstate.NewGenerator(authConfig.OAuthStateTTL)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
 			"build authentication handlers: create OAuth state generator: %w",
@@ -107,11 +106,10 @@ func buildAuthHandlers(
 		)
 	}
 
-	stateStore, err :=
-		oauthstate.NewDynamoDBStore(
-			dynamoDBClient,
-			authConfig.OAuthStateTableName,
-		)
+	stateStore, err := oauthstate.NewDynamoDBStore(
+		dynamoDBClient,
+		authConfig.OAuthStateTableName,
+	)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
 			"build authentication handlers: create OAuth state store: %w",
@@ -119,11 +117,10 @@ func buildAuthHandlers(
 		)
 	}
 
-	sessionStore, err :=
-		session.NewDynamoDBStore(
-			dynamoDBClient,
-			authConfig.SessionTableName,
-		)
+	sessionStore, err := session.NewDynamoDBStore(
+		dynamoDBClient,
+		authConfig.SessionTableName,
+	)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
 			"build authentication handlers: create session store: %w",
@@ -131,10 +128,7 @@ func buildAuthHandlers(
 		)
 	}
 
-	cookieManager, err :=
-		session.NewCookieManager(
-			authConfig.SessionLifetime,
-		)
+	cookieManager, err := session.NewCookieManager(authConfig.SessionLifetime)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
 			"build authentication handlers: create cookie manager: %w",
@@ -142,8 +136,18 @@ func buildAuthHandlers(
 		)
 	}
 
-	sessionIDGenerator :=
-		session.NewIDGenerator()
+	sessionResolver, err := session.NewResolver(
+		cookieManager,
+		sessionStore,
+	)
+	if err != nil {
+		return authHandlers{}, fmt.Errorf(
+			"build authentication handlers: create session resolver: %w",
+			err,
+		)
+	}
+
+	sessionIDGenerator := session.NewIDGenerator()
 
 	loginHandler, err := authlogin.NewHandler(
 		stateGenerator,
@@ -157,20 +161,18 @@ func buildAuthHandlers(
 		)
 	}
 
-	callbackHandler, err :=
-		authcallback.NewHandler(
-			stateStore,
-			cognitoClient,
-			verifier,
-			sessionIDGenerator,
-			sessionStore,
-			cookieManager,
-			authcallback.Config{
-				RedirectURL: authConfig.
-					PostLoginRedirectURL,
-				SessionLifetime: authConfig.SessionLifetime,
-			},
-		)
+	callbackHandler, err := authcallback.NewHandler(
+		stateStore,
+		cognitoClient,
+		verifier,
+		sessionIDGenerator,
+		sessionStore,
+		cookieManager,
+		authcallback.Config{
+			RedirectURL:     authConfig.PostLoginRedirectURL,
+			SessionLifetime: authConfig.SessionLifetime,
+		},
+	)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
 			"build authentication handlers: create callback handler: %w",
@@ -178,8 +180,30 @@ func buildAuthHandlers(
 		)
 	}
 
+	sessionStatusHandler, err := authstatus.NewHandler(sessionResolver)
+	if err != nil {
+		return authHandlers{}, fmt.Errorf(
+			"build authentication handlers: create session status handler: %w",
+			err,
+		)
+	}
+
+	logoutHandler, err := authlogout.NewHandler(
+		sessionResolver,
+		sessionStore,
+		cookieManager,
+	)
+	if err != nil {
+		return authHandlers{}, fmt.Errorf(
+			"build authentication handlers: create logout handler: %w",
+			err,
+		)
+	}
+
 	return authHandlers{
-		login:    loginHandler,
-		callback: callbackHandler,
+		login:         loginHandler,
+		callback:      callbackHandler,
+		sessionStatus: sessionStatusHandler,
+		logout:        logoutHandler,
 	}, nil
 }
