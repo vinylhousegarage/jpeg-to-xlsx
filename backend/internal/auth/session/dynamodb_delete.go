@@ -14,10 +14,10 @@ func (
 	store *DynamoDBStore,
 ) Delete(
 	ctx context.Context,
-	sessionIDHash string,
+	idHash string,
 ) error {
 	if strings.TrimSpace(
-		sessionIDHash,
+		idHash,
 	) == "" {
 		return fmt.Errorf(
 			"delete session: session ID hash is empty",
@@ -31,8 +31,8 @@ func (
 				store.tableName,
 			),
 			Key: map[string]types.AttributeValue{
-				"session_id_hash": &types.AttributeValueMemberS{
-					Value: sessionIDHash,
+				"id_hash": &types.AttributeValueMemberS{
+					Value: idHash,
 				},
 			},
 		},

@@ -36,10 +36,10 @@ type DynamoDBStore struct {
 }
 
 type sessionItem struct {
-	SessionIDHash string `dynamodbav:"session_id_hash"`
-	CognitoSub    string `dynamodbav:"cognito_sub"`
-	CreatedAt     int64  `dynamodbav:"created_at"`
-	ExpiresAt     int64  `dynamodbav:"expires_at"`
+	IDHash     string `dynamodbav:"id_hash"`
+	CognitoSub string `dynamodbav:"cognito_sub"`
+	CreatedAt  int64  `dynamodbav:"created_at"`
+	ExpiresAt  int64  `dynamodbav:"expires_at"`
 }
 
 var _ Store = (*DynamoDBStore)(nil)
