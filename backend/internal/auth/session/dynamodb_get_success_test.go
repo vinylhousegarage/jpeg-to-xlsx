@@ -19,13 +19,13 @@ func TestDynamoDBStoreGet(
 
 	item, err := attributevalue.MarshalMap(
 		struct {
-			SessionIDHash string `dynamodbav:"session_id_hash"`
-			CognitoSub    string `dynamodbav:"cognito_sub"`
-			CreatedAt     int64  `dynamodbav:"created_at"`
-			ExpiresAt     int64  `dynamodbav:"expires_at"`
+			IDHash     string `dynamodbav:"id_hash"`
+			CognitoSub string `dynamodbav:"cognito_sub"`
+			CreatedAt  int64  `dynamodbav:"created_at"`
+			ExpiresAt  int64  `dynamodbav:"expires_at"`
 		}{
-			SessionIDHash: wantSession.IDHash,
-			CognitoSub:    wantSession.CognitoSub,
+			IDHash:     wantSession.IDHash,
+			CognitoSub: wantSession.CognitoSub,
 			CreatedAt: wantSession.
 				CreatedAt.
 				Unix(),
@@ -109,27 +109,27 @@ func TestDynamoDBStoreGet(
 	}
 
 	keyAttribute, exists :=
-		input.Key["session_id_hash"]
+		input.Key["id_hash"]
 	if !exists {
 		t.Fatal(
-			"GetItem() key session_id_hash is missing",
+			"GetItem() key id_hash is missing",
 		)
 	}
 
-	sessionIDHashAttribute, ok :=
+	idHashAttribute, ok :=
 		keyAttribute.(*types.AttributeValueMemberS)
 	if !ok {
 		t.Fatalf(
-			"GetItem() key session_id_hash type = %T, want *types.AttributeValueMemberS",
+			"GetItem() key id_hash type = %T, want *types.AttributeValueMemberS",
 			keyAttribute,
 		)
 	}
 
-	if sessionIDHashAttribute.Value !=
+	if idHashAttribute.Value !=
 		testSessionIDHash {
 		t.Errorf(
 			"GetItem() session ID hash = %q, want %q",
-			sessionIDHashAttribute.Value,
+			idHashAttribute.Value,
 			testSessionIDHash,
 		)
 	}

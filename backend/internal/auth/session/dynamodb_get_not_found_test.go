@@ -166,15 +166,15 @@ func marshalTestSessionItem(
 ) {
 	return attributevalue.MarshalMap(
 		struct {
-			SessionIDHash string `dynamodbav:"session_id_hash"`
-			CognitoSub    string `dynamodbav:"cognito_sub"`
-			CreatedAt     int64  `dynamodbav:"created_at"`
-			ExpiresAt     int64  `dynamodbav:"expires_at"`
+			IDHash     string `dynamodbav:"id_hash"`
+			CognitoSub string `dynamodbav:"cognito_sub"`
+			CreatedAt  int64  `dynamodbav:"created_at"`
+			ExpiresAt  int64  `dynamodbav:"expires_at"`
 		}{
-			SessionIDHash: session.IDHash,
-			CognitoSub:    session.CognitoSub,
-			CreatedAt:     session.CreatedAt.Unix(),
-			ExpiresAt:     session.ExpiresAt.Unix(),
+			IDHash:     session.IDHash,
+			CognitoSub: session.CognitoSub,
+			CreatedAt:  session.CreatedAt.Unix(),
+			ExpiresAt:  session.ExpiresAt.Unix(),
 		},
 	)
 }

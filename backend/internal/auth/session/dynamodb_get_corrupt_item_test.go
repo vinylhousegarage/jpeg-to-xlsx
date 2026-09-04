@@ -28,7 +28,7 @@ func TestDynamoDBStoreGetRejectsInvalidStoredSession(
 			) {
 				delete(
 					item,
-					"session_id_hash",
+					"id_hash",
 				)
 			},
 		},
@@ -37,7 +37,7 @@ func TestDynamoDBStoreGetRejectsInvalidStoredSession(
 			mutate: func(
 				item map[string]types.AttributeValue,
 			) {
-				item["session_id_hash"] =
+				item["id_hash"] =
 					&types.AttributeValueMemberS{
 						Value: "",
 					}
@@ -48,7 +48,7 @@ func TestDynamoDBStoreGetRejectsInvalidStoredSession(
 			mutate: func(
 				item map[string]types.AttributeValue,
 			) {
-				item["session_id_hash"] =
+				item["id_hash"] =
 					&types.AttributeValueMemberS{
 						Value: "   ",
 					}
@@ -59,7 +59,7 @@ func TestDynamoDBStoreGetRejectsInvalidStoredSession(
 			mutate: func(
 				item map[string]types.AttributeValue,
 			) {
-				item["session_id_hash"] =
+				item["id_hash"] =
 					&types.AttributeValueMemberS{
 						Value: "unexpected-session-id-hash",
 					}

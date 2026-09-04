@@ -65,10 +65,10 @@ func TestDynamoDBStoreSave(
 	}
 
 	var item struct {
-		SessionIDHash string `dynamodbav:"session_id_hash"`
-		CognitoSub    string `dynamodbav:"cognito_sub"`
-		CreatedAt     int64  `dynamodbav:"created_at"`
-		ExpiresAt     int64  `dynamodbav:"expires_at"`
+		IDHash     string `dynamodbav:"id_hash"`
+		CognitoSub string `dynamodbav:"cognito_sub"`
+		CreatedAt  int64  `dynamodbav:"created_at"`
+		ExpiresAt  int64  `dynamodbav:"expires_at"`
 	}
 
 	if err := attributevalue.UnmarshalMap(
@@ -81,11 +81,11 @@ func TestDynamoDBStoreSave(
 		)
 	}
 
-	if item.SessionIDHash !=
+	if item.IDHash !=
 		session.IDHash {
 		t.Errorf(
 			"item session ID hash = %q, want %q",
-			item.SessionIDHash,
+			item.IDHash,
 			session.IDHash,
 		)
 	}
@@ -117,7 +117,7 @@ func TestDynamoDBStoreSave(
 		)
 	}
 
-	const wantConditionExpression = "attribute_not_exists(#session_id_hash)"
+	const wantConditionExpression = "attribute_not_exists(#id_hash)"
 
 	if got := aws.ToString(
 		input.ConditionExpression,
@@ -130,14 +130,14 @@ func TestDynamoDBStoreSave(
 	}
 
 	gotAttributeName :=
-		input.ExpressionAttributeNames["#session_id_hash"]
+		input.ExpressionAttributeNames["#id_hash"]
 
 	if gotAttributeName !=
-		"session_id_hash" {
+		"id_hash" {
 		t.Errorf(
-			"PutItem() expression attribute name #session_id_hash = %q, want %q",
+			"PutItem() expression attribute name #id_hash = %q, want %q",
 			gotAttributeName,
-			"session_id_hash",
+			"id_hash",
 		)
 	}
 }

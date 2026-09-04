@@ -27,8 +27,8 @@ func (
 
 	item, err := attributevalue.MarshalMap(
 		sessionItem{
-			SessionIDHash: session.IDHash,
-			CognitoSub:    session.CognitoSub,
+			IDHash:     session.IDHash,
+			CognitoSub: session.CognitoSub,
 			CreatedAt: session.
 				CreatedAt.
 				Unix(),
@@ -52,10 +52,10 @@ func (
 			),
 			Item: item,
 			ConditionExpression: aws.String(
-				"attribute_not_exists(#session_id_hash)",
+				"attribute_not_exists(#id_hash)",
 			),
 			ExpressionAttributeNames: map[string]string{
-				"#session_id_hash": "session_id_hash",
+				"#id_hash": "id_hash",
 			},
 		},
 	)

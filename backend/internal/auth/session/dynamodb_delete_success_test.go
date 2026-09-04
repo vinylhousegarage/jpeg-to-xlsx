@@ -63,27 +63,27 @@ func TestDynamoDBStoreDelete(
 	}
 
 	keyAttribute, exists :=
-		input.Key["session_id_hash"]
+		input.Key["id_hash"]
 	if !exists {
 		t.Fatal(
-			"DeleteItem() key session_id_hash is missing",
+			"DeleteItem() key id_hash is missing",
 		)
 	}
 
-	sessionIDHashAttribute, ok :=
+	idHashAttribute, ok :=
 		keyAttribute.(*types.AttributeValueMemberS)
 	if !ok {
 		t.Fatalf(
-			"DeleteItem() key session_id_hash type = %T, want *types.AttributeValueMemberS",
+			"DeleteItem() key id_hash type = %T, want *types.AttributeValueMemberS",
 			keyAttribute,
 		)
 	}
 
-	if sessionIDHashAttribute.Value !=
+	if idHashAttribute.Value !=
 		testSessionIDHash {
 		t.Errorf(
 			"DeleteItem() session ID hash = %q, want %q",
-			sessionIDHashAttribute.Value,
+			idHashAttribute.Value,
 			testSessionIDHash,
 		)
 	}

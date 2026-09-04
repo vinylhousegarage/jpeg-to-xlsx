@@ -17,13 +17,13 @@ func (
 	store *DynamoDBStore,
 ) Get(
 	ctx context.Context,
-	sessionIDHash string,
+	idHash string,
 ) (Session, error) {
 	if strings.TrimSpace(
-		sessionIDHash,
+		idHash,
 	) == "" {
 		return Session{}, fmt.Errorf(
-			"get session: session ID hash is empty",
+			"get session: ID hash is empty",
 		)
 	}
 
@@ -34,8 +34,8 @@ func (
 				store.tableName,
 			),
 			Key: map[string]types.AttributeValue{
-				"session_id_hash": &types.AttributeValueMemberS{
-					Value: sessionIDHash,
+				"id_hash": &types.AttributeValueMemberS{
+					Value: idHash,
 				},
 			},
 			ConsistentRead: aws.Bool(true),
@@ -70,7 +70,7 @@ func (
 
 	if err := validateStoredSessionItem(
 		item,
-		sessionIDHash,
+		idHash,
 	); err != nil {
 		return Session{}, fmt.Errorf(
 			"get session: invalid stored item: %w",
@@ -79,7 +79,7 @@ func (
 	}
 
 	session := Session{
-		IDHash:     item.SessionIDHash,
+		IDHash:     item.IDHash,
 		CognitoSub: item.CognitoSub,
 		CreatedAt: time.Unix(
 			item.CreatedAt,
@@ -105,10 +105,10 @@ func (
 
 func validateStoredSessionItem(
 	item sessionItem,
-	expectedSessionIDHash string,
+	expectedIDHash string,
 ) error {
 	if strings.TrimSpace(
-		item.SessionIDHash,
+		item.IDHash,
 	) == "" {
 		return fmt.Errorf(
 			"session ID hash is empty",
@@ -116,8 +116,8 @@ func validateStoredSessionItem(
 	}
 
 	if subtle.ConstantTimeCompare(
-		[]byte(item.SessionIDHash),
-		[]byte(expectedSessionIDHash),
+		[]byte(item.IDHash),
+		[]byte(expectedIDHash),
 	) != 1 {
 		return fmt.Errorf(
 			"session ID hash does not match",
