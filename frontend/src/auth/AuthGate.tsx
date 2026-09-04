@@ -2,9 +2,10 @@ import {
   type PropsWithChildren,
   useEffect,
 } from 'react';
+
 import { Spinner } from '../common';
 import { standardButtonStyle } from '../styles/button';
-import { useAuth } from './useAuth';
+import { useAuthContext } from './AuthContext';
 
 let signInRedirectStarted = false;
 
@@ -15,7 +16,7 @@ export const AuthGate = ({
     status,
     error,
     signIn,
-  } = useAuth();
+  } = useAuthContext();
 
   useEffect(() => {
     if (

@@ -1,5 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
 import { SuccessDisplay } from './SuccessDisplay';
 
 describe('SuccessDisplay', () => {
@@ -9,7 +19,7 @@ describe('SuccessDisplay', () => {
       render(
         <SuccessDisplay
           onContinue={vi.fn()}
-          onExit={vi.fn()}
+          onLogout={vi.fn()}
         />,
       );
 
@@ -27,14 +37,11 @@ describe('SuccessDisplay', () => {
       const { container } = render(
         <SuccessDisplay
           onContinue={vi.fn()}
-          onExit={vi.fn()}
+          onLogout={vi.fn()}
         />,
       );
 
-      const display =
-        container.querySelector(
-          '.success-display',
-        );
+      const display = container.querySelector('.success-display');
 
       expect(display).toHaveStyle({
         maxWidth: '375px',
@@ -42,13 +49,11 @@ describe('SuccessDisplay', () => {
         textAlign: 'center',
       });
 
-      const continueButton =
-        screen.getByRole('button', {
-          name: 'つづけて撮影',
-        });
+      const continueButton = screen.getByRole('button', {
+        name: 'つづけて撮影',
+      });
 
-      const buttonGroup =
-        continueButton.parentElement;
+      const buttonGroup = continueButton.parentElement;
 
       expect(buttonGroup).not.toBeNull();
 
@@ -65,57 +70,43 @@ describe('SuccessDisplay', () => {
     'calls onContinue when the continue button is clicked',
     () => {
       const onContinue = vi.fn();
-      const onExit = vi.fn();
+      const onLogout = vi.fn();
 
       render(
         <SuccessDisplay
           onContinue={onContinue}
-          onExit={onExit}
+          onLogout={onLogout}
         />,
       );
 
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: 'つづけて撮影',
-        }),
-      );
+      fireEvent.click(screen.getByRole('button', {
+        name: 'つづけて撮影',
+      }));
 
-      expect(
-        onContinue,
-      ).toHaveBeenCalledTimes(1);
-
-      expect(
-        onExit,
-      ).not.toHaveBeenCalled();
+      expect(onContinue).toHaveBeenCalledTimes(1);
+      expect(onLogout).not.toHaveBeenCalled();
     },
   );
 
   it(
-    'calls onExit when the exit button is clicked',
+    'calls onLogout when the logout button is clicked',
     () => {
       const onContinue = vi.fn();
-      const onExit = vi.fn();
+      const onLogout = vi.fn();
 
       render(
         <SuccessDisplay
           onContinue={onContinue}
-          onExit={onExit}
+          onLogout={onLogout}
         />,
       );
 
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: '終了',
-        }),
-      );
+      fireEvent.click(screen.getByRole('button', {
+        name: 'ログアウト',
+      }));
 
-      expect(
-        onExit,
-      ).toHaveBeenCalledTimes(1);
-
-      expect(
-        onContinue,
-      ).not.toHaveBeenCalled();
+      expect(onLogout).toHaveBeenCalledTimes(1);
+      expect(onContinue).not.toHaveBeenCalled();
     },
   );
 });
