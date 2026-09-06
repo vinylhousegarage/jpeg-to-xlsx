@@ -78,7 +78,7 @@ export const PreviewActions = ({
         disabled={disabled}
         style={standardButtonStyle}
       >
-        画像を確定し送信
+        送信
       </button>
     </div>
   );
