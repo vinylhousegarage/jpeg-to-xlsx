@@ -48,7 +48,7 @@ describe('PreviewActions', () => {
 
       fireEvent.click(
         screen.getByRole('button', {
-          name: '画像を確定し送信',
+          name: '送信',
         }),
       );
 
@@ -86,7 +86,7 @@ describe('PreviewActions', () => {
 
       const submitButton =
         screen.getByRole('button', {
-          name: '画像を確定し送信',
+          name: '送信',
         });
 
       const input =
@@ -133,7 +133,7 @@ describe('PreviewActions', () => {
 
       const submitButton =
         screen.getByRole('button', {
-          name: '画像を確定し送信',
+          name: '送信',
         });
 
       const input =
@@ -174,7 +174,7 @@ describe('PreviewActions', () => {
 
       expect(
         screen.getByRole('button', {
-          name: '画像を確定し送信',
+          name: '送信',
         }),
       ).toBeEnabled();
 
