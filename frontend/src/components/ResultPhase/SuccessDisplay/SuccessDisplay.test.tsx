@@ -2,6 +2,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from '@testing-library/react';
 import {
   describe,
@@ -18,7 +19,9 @@ describe('SuccessDisplay', () => {
     () => {
       render(
         <SuccessDisplay
-          onContinue={vi.fn()}
+          onContinueFileSelected={
+            vi.fn().mockResolvedValue(undefined)
+          }
           onLogout={vi.fn()}
         />,
       );
@@ -36,7 +39,9 @@ describe('SuccessDisplay', () => {
     () => {
       const { container } = render(
         <SuccessDisplay
-          onContinue={vi.fn()}
+          onContinueFileSelected={
+            vi.fn().mockResolvedValue(undefined)
+          }
           onLogout={vi.fn()}
         />,
       );
@@ -67,23 +72,50 @@ describe('SuccessDisplay', () => {
   );
 
   it(
-    'calls onContinue when the continue button is clicked',
-    () => {
-      const onContinue = vi.fn();
+    'passes the selected file to onContinueFileSelected',
+    async () => {
+      const onContinueFileSelected = vi
+        .fn()
+        .mockResolvedValue(undefined);
+
       const onLogout = vi.fn();
 
-      render(
+      const { container } = render(
         <SuccessDisplay
-          onContinue={onContinue}
+          onContinueFileSelected={
+            onContinueFileSelected
+          }
           onLogout={onLogout}
         />,
       );
 
-      fireEvent.click(screen.getByRole('button', {
-        name: 'つづけて撮影',
-      }));
+      const input = container.querySelector<HTMLInputElement>(
+        'input[type="file"]',
+      );
 
-      expect(onContinue).toHaveBeenCalledTimes(1);
+      expect(input).not.toBeNull();
+
+      const file = new File(
+        ['image data'],
+        'photo.jpg',
+        {
+          type: 'image/jpeg',
+        },
+      );
+
+      fireEvent.change(input!, {
+        target: {
+          files: [file],
+        },
+      });
+
+      await waitFor(() => {
+        expect(
+          onContinueFileSelected,
+        ).toHaveBeenCalledWith(file);
+      });
+
+      expect(onContinueFileSelected).toHaveBeenCalledTimes(1);
       expect(onLogout).not.toHaveBeenCalled();
     },
   );
@@ -91,22 +123,29 @@ describe('SuccessDisplay', () => {
   it(
     'calls onLogout when the logout button is clicked',
     () => {
-      const onContinue = vi.fn();
+      const onContinueFileSelected = vi
+        .fn()
+        .mockResolvedValue(undefined);
+
       const onLogout = vi.fn();
 
       render(
         <SuccessDisplay
-          onContinue={onContinue}
+          onContinueFileSelected={
+            onContinueFileSelected
+          }
           onLogout={onLogout}
         />,
       );
 
-      fireEvent.click(screen.getByRole('button', {
-        name: 'ログアウト',
-      }));
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'ログアウト',
+        }),
+      );
 
       expect(onLogout).toHaveBeenCalledTimes(1);
-      expect(onContinue).not.toHaveBeenCalled();
+      expect(onContinueFileSelected).not.toHaveBeenCalled();
     },
   );
 });

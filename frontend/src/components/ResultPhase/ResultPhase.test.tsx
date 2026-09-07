@@ -2,6 +2,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from '@testing-library/react';
 import {
   beforeEach,
@@ -12,7 +13,6 @@ import {
 } from 'vitest';
 
 import type {
-  AppAction,
   ResultPhase as ResultPhaseState,
 } from '../../types';
 import { ResultPhase } from './ResultPhase';
@@ -24,6 +24,80 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../auth/AuthContext', () => ({
   useAuthContext: mocks.useAuthContext,
 }));
+
+const successState: ResultPhaseState = {
+  type: 'result',
+  shotNumber: 'SHOT-001',
+  status: 'success',
+};
+
+const createErrorState =
+  (): ResultPhaseState => ({
+    type: 'result',
+    shotNumber: 'SHOT-001',
+    status: 'error',
+    error: new Error(
+      '画像の送信に失敗しました',
+    ),
+  });
+
+const createOnFileSelected = () =>
+  vi.fn().mockResolvedValue(undefined);
+
+const createImageFile = (): File =>
+  new File(
+    ['image data'],
+    'photo.jpg',
+    {
+      type: 'image/jpeg',
+    },
+  );
+
+const getFileInput = (
+  container: HTMLElement,
+): HTMLInputElement => {
+  const input =
+    container.querySelector<HTMLInputElement>('input[type="file"]');
+
+  if (!input) {
+    throw new Error('file input was not found');
+  }
+
+  return input;
+};
+
+const renderResultPhase = (
+  state: ResultPhaseState,
+  onFileSelected =
+    createOnFileSelected(),
+) => {
+  const renderResult = render(
+    <ResultPhase
+      state={state}
+      onFileSelected={onFileSelected}
+    />,
+  );
+
+  return {
+    ...renderResult,
+    onFileSelected,
+  };
+};
+
+const selectImageFile = (
+  container: HTMLElement,
+): File => {
+  const input = getFileInput(container);
+  const file = createImageFile();
+
+  fireEvent.change(input, {
+    target: {
+      files: [file],
+    },
+  });
+
+  return file;
+};
 
 describe('ResultPhase', () => {
   const signIn = vi.fn();
@@ -45,186 +119,113 @@ describe('ResultPhase', () => {
     });
   });
 
-  it('renders SuccessDisplay when status is success', () => {
-    const dispatch = vi.fn();
-    const state: ResultPhaseState = {
-      type: 'result',
-      shotNumber: 'SHOT-001',
-      status: 'success',
-    };
+  it(
+    'renders SuccessDisplay when status is success',
+    () => {
+      renderResultPhase(successState);
 
-    render(
-      <ResultPhase
-        state={state}
-        dispatch={dispatch}
-      />,
-    );
+      expect(
+        screen.getByRole('heading', {
+          name: '送信完了',
+        }),
+      ).toBeInTheDocument();
 
-    expect(
-      screen.getByRole('heading', {
-        name: '送信完了',
-      }),
-    ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', {
+          name: '送信失敗',
+        }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
-    expect(
-      screen.queryByRole('heading', {
-        name: '送信失敗',
-      }),
-    ).not.toBeInTheDocument();
-  });
+  it(
+    'renders ErrorDisplay with the error message when status is error',
+    () => {
+      renderResultPhase(createErrorState());
 
-  it('renders ErrorDisplay with the error message when status is error', () => {
-    const dispatch = vi.fn();
-    const error = new Error('画像の送信に失敗しました');
-    const state: ResultPhaseState = {
-      type: 'result',
-      shotNumber: 'SHOT-001',
-      status: 'error',
-      error,
-    };
+      expect(
+        screen.getByRole('heading', {
+          name: '送信失敗',
+        }),
+      ).toBeInTheDocument();
 
-    render(
-      <ResultPhase
-        state={state}
-        dispatch={dispatch}
-      />,
-    );
+      expect(screen.getByText('画像の送信に失敗しました')).toBeInTheDocument();
 
-    expect(
-      screen.getByRole('heading', {
-        name: '送信失敗',
-      }),
-    ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', {
+          name: '送信完了',
+        }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
-    expect(
-      screen.getByText(
-        '画像の送信に失敗しました',
-      ),
-    ).toBeInTheDocument();
+  it(
+    'passes the selected file from SuccessDisplay to onFileSelected',
+    async () => {
+      const {
+        container,
+        onFileSelected,
+      } = renderResultPhase(successState);
 
-    expect(
-      screen.queryByRole('heading', {
-        name: '送信完了',
-      }),
-    ).not.toBeInTheDocument();
-  });
+      const file = selectImageFile(container);
 
-  it('dispatches CONTINUE when the continue button is clicked', () => {
-    const dispatch = vi.fn();
-    const state: ResultPhaseState = {
-      type: 'result',
-      shotNumber: 'SHOT-001',
-      status: 'success',
-    };
+      await waitFor(() => {
+        expect(onFileSelected).toHaveBeenCalledWith(file);
+      });
 
-    render(
-      <ResultPhase
-        state={state}
-        dispatch={dispatch}
-      />,
-    );
+      expect(onFileSelected).toHaveBeenCalledTimes(1);
+      expect(signOut).not.toHaveBeenCalled();
+    },
+  );
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'つづけて撮影',
-      }),
-    );
+  it(
+    'passes the selected file from ErrorDisplay to onFileSelected',
+    async () => {
+      const {
+        container,
+        onFileSelected,
+      } = renderResultPhase(createErrorState());
 
-    expect(dispatch).toHaveBeenCalledOnce();
+      const file = selectImageFile(container);
 
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'CONTINUE',
-    } satisfies AppAction);
+      await waitFor(() => {
+        expect(onFileSelected).toHaveBeenCalledWith(file);
+      });
 
-    expect(signOut).not.toHaveBeenCalled();
-  });
+      expect(onFileSelected).toHaveBeenCalledTimes(1);
+      expect(signOut).not.toHaveBeenCalled();
+    },
+  );
 
-  it('dispatches CONTINUE when the retake button is clicked', () => {
-    const dispatch = vi.fn();
-    const state: ResultPhaseState = {
-      type: 'result',
-      shotNumber: 'SHOT-001',
-      status: 'error',
-      error: new Error(
-        '画像の送信に失敗しました',
-      ),
-    };
+  it(
+    'signs out from the success result',
+    () => {
+      const { onFileSelected } = renderResultPhase(successState);
 
-    render(
-      <ResultPhase
-        state={state}
-        dispatch={dispatch}
-      />,
-    );
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'ログアウト',
+        }),
+      );
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: '撮り直し',
-      }),
-    );
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(onFileSelected).not.toHaveBeenCalled();
+    },
+  );
 
-    expect(dispatch).toHaveBeenCalledOnce();
+  it(
+    'signs out from the error result',
+    () => {
+      const { onFileSelected } = renderResultPhase(createErrorState());
 
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'CONTINUE',
-    } satisfies AppAction);
-  });
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'ログアウト',
+        }),
+      );
 
-  it('signs out when the logout button is clicked', () => {
-    const dispatch = vi.fn();
-    const state: ResultPhaseState = {
-      type: 'result',
-      shotNumber: 'SHOT-001',
-      status: 'success',
-    };
-
-    render(
-      <ResultPhase
-        state={state}
-        dispatch={dispatch}
-      />,
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'ログアウト',
-      }),
-    );
-
-    expect(signOut).toHaveBeenCalledOnce();
-    expect(dispatch).not.toHaveBeenCalled();
-  });
-
-  it('dispatches EXIT from the error result', () => {
-    const dispatch = vi.fn();
-    const state: ResultPhaseState = {
-      type: 'result',
-      shotNumber: 'SHOT-001',
-      status: 'error',
-      error: new Error(
-        '画像の送信に失敗しました',
-      ),
-    };
-
-    render(
-      <ResultPhase
-        state={state}
-        dispatch={dispatch}
-      />,
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: '終了',
-      }),
-    );
-
-    expect(dispatch).toHaveBeenCalledOnce();
-
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'EXIT',
-    } satisfies AppAction);
-
-    expect(signOut).not.toHaveBeenCalled();
-  });
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(onFileSelected).not.toHaveBeenCalled();
+    },
+  );
 });

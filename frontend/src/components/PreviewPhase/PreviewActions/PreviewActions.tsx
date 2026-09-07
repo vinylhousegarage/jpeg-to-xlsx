@@ -1,4 +1,4 @@
-import { useRef, type ChangeEvent } from 'react';
+import { CameraButton } from '../../CameraButton';
 import { standardButtonStyle } from '../../../styles/button';
 
 type Props = {
@@ -16,32 +16,8 @@ export const PreviewActions = ({
   isSending = false,
   isCompressing = false,
 }: Props) => {
-  const fileInputRef =
-    useRef<HTMLInputElement>(null);
-
   const disabled =
     isSending || isCompressing;
-
-  const handleRetake = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file =
-      event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    try {
-      await onRetakeFileSelected(file);
-    } finally {
-      event.target.value = '';
-    }
-  };
 
   return (
     <div
@@ -53,24 +29,12 @@ export const PreviewActions = ({
         width: '100%',
       }}
     >
-      <button
-        type="button"
-        onClick={handleRetake}
+      <CameraButton
+        onFileSelected={onRetakeFileSelected}
         disabled={disabled}
-        style={standardButtonStyle}
       >
         撮り直し
-      </button>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileChange}
-        disabled={disabled}
-        style={{ display: 'none' }}
-      />
+      </CameraButton>
 
       <button
         type="button"

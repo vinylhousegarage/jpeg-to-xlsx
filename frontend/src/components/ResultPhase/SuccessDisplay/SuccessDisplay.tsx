@@ -1,12 +1,15 @@
+import { CameraButton } from '../../CameraButton';
 import { standardButtonStyle } from '../../../styles/button';
 
 type Props = {
-  onContinue: () => void;
+  onContinueFileSelected: (
+    file: File,
+  ) => Promise<void>;
   onLogout: () => void;
 };
 
 export const SuccessDisplay: React.FC<Props> = ({
-  onContinue,
+  onContinueFileSelected,
   onLogout,
 }) => {
   return (
@@ -28,13 +31,13 @@ export const SuccessDisplay: React.FC<Props> = ({
           width: '100%',
         }}
       >
-        <button
-          type="button"
-          onClick={onContinue}
-          style={standardButtonStyle}
+        <CameraButton
+          onFileSelected={
+            onContinueFileSelected
+          }
         >
           つづけて撮影
-        </button>
+        </CameraButton>
 
         <button
           type="button"

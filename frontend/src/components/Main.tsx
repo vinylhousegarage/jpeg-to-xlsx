@@ -100,7 +100,7 @@ export const Main = () => {
       return (
         <ResultPhase
           state={state.phase}
-          dispatch={dispatch}
+          onFileSelected={processImage}
         />
       );
 
