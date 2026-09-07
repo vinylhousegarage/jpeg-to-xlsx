@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { compressImage } from '../components/PreviewPhase/utils/compressImage';
+import { compressImage } from '../utils';
 
 export const useImageProcessor = (
   onCapture: (blob: Blob) => void,

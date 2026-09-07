@@ -12,23 +12,6 @@ import {
 
 import { PreviewActions } from './PreviewActions';
 
-const getFileInput = (
-  container: HTMLElement,
-): HTMLInputElement => {
-  const input =
-    container.querySelector<HTMLInputElement>(
-      'input[type="file"]',
-    );
-
-  if (!input) {
-    throw new Error(
-      'file input was not found',
-    );
-  }
-
-  return input;
-};
-
 describe('PreviewActions', () => {
   it(
     'calls onSubmit when the submit button is clicked',
@@ -48,28 +31,23 @@ describe('PreviewActions', () => {
 
       fireEvent.click(
         screen.getByRole('button', {
-          name: '画像を確定し送信',
+          name: '送信',
         }),
       );
 
-      expect(
-        onSubmit,
-      ).toHaveBeenCalledTimes(1);
-
-      expect(
-        onRetakeFileSelected,
-      ).not.toHaveBeenCalled();
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+      expect(onRetakeFileSelected).not.toHaveBeenCalled();
     },
   );
 
   it(
-    'disables both buttons and the file input while sending',
+    'disables both buttons while sending',
     () => {
       const onRetakeFileSelected =
         vi.fn();
       const onSubmit = vi.fn();
 
-      const { container } = render(
+      render(
         <PreviewActions
           onRetakeFileSelected={
             onRetakeFileSelected
@@ -86,37 +64,28 @@ describe('PreviewActions', () => {
 
       const submitButton =
         screen.getByRole('button', {
-          name: '画像を確定し送信',
+          name: '送信',
         });
-
-      const input =
-        getFileInput(container);
 
       expect(retakeButton).toBeDisabled();
       expect(submitButton).toBeDisabled();
-      expect(input).toBeDisabled();
 
       fireEvent.click(retakeButton);
       fireEvent.click(submitButton);
 
-      expect(
-        onRetakeFileSelected,
-      ).not.toHaveBeenCalled();
-
-      expect(
-        onSubmit,
-      ).not.toHaveBeenCalled();
+      expect(onRetakeFileSelected).not.toHaveBeenCalled();
+      expect(onSubmit).not.toHaveBeenCalled();
     },
   );
 
   it(
-    'disables both buttons and the file input while compressing',
+    'disables both buttons while compressing',
     () => {
       const onRetakeFileSelected =
         vi.fn();
       const onSubmit = vi.fn();
 
-      const { container } = render(
+      render(
         <PreviewActions
           onRetakeFileSelected={
             onRetakeFileSelected
@@ -126,40 +95,29 @@ describe('PreviewActions', () => {
         />,
       );
 
-      const retakeButton =
-        screen.getByRole('button', {
-          name: '撮り直し',
-        });
+      const retakeButton = screen.getByRole('button', {
+        name: '撮り直し',
+      });
 
-      const submitButton =
-        screen.getByRole('button', {
-          name: '画像を確定し送信',
-        });
-
-      const input =
-        getFileInput(container);
+      const submitButton = screen.getByRole('button', {
+        name: '送信',
+      });
 
       expect(retakeButton).toBeDisabled();
       expect(submitButton).toBeDisabled();
-      expect(input).toBeDisabled();
 
       fireEvent.click(retakeButton);
       fireEvent.click(submitButton);
 
-      expect(
-        onRetakeFileSelected,
-      ).not.toHaveBeenCalled();
-
-      expect(
-        onSubmit,
-      ).not.toHaveBeenCalled();
+      expect(onRetakeFileSelected).not.toHaveBeenCalled();
+      expect(onSubmit).not.toHaveBeenCalled();
     },
   );
 
   it(
-    'enables both buttons and the file input by default',
+    'enables both buttons by default',
     () => {
-      const { container } = render(
+      render(
         <PreviewActions
           onRetakeFileSelected={vi.fn()}
           onSubmit={vi.fn()}
@@ -174,12 +132,8 @@ describe('PreviewActions', () => {
 
       expect(
         screen.getByRole('button', {
-          name: '画像を確定し送信',
+          name: '送信',
         }),
-      ).toBeEnabled();
-
-      expect(
-        getFileInput(container),
       ).toBeEnabled();
     },
   );

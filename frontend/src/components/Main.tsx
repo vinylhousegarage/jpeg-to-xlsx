@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { usePresignUpload } from '../hooks/usePresignUpload';
 import { useAppState } from '../state/useContext';
-import { createShotNumber } from '../utils/createShotNumber';
+import { createShotNumber } from '../utils';
 import { Spinner } from '../common/Spinner';
 import { InputPhase } from './InputPhase';
 import { PreviewPhase } from './PreviewPhase';
@@ -100,7 +100,7 @@ export const Main = () => {
       return (
         <ResultPhase
           state={state.phase}
-          dispatch={dispatch}
+          onFileSelected={processImage}
         />
       );
 

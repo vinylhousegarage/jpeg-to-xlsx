@@ -13,7 +13,7 @@ export const getImageDimensions = (blob: Blob): Promise<{ width: number; height:
 
     // 失敗時
     img.onerror = () => {
-      reject(new Error("Failed to load image for dimension check"));
+      reject(new Error('Failed to load image for dimension check'));
       URL.revokeObjectURL(objectUrl); // メモリ解放
     };
   });

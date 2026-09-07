@@ -1,15 +1,18 @@
+import { CameraButton } from '../../CameraButton';
 import { standardButtonStyle } from '../../../styles/button';
 
 type Props = {
   error?: Error;
-  onContinue: () => void;
-  onExit: () => void;
+  onRetakeFileSelected: (
+    file: File,
+  ) => Promise<void>;
+  onLogout: () => void;
 };
 
 export const ErrorDisplay: React.FC<Props> = ({
   error,
-  onContinue,
-  onExit,
+  onRetakeFileSelected,
+  onLogout,
 }) => {
   return (
     <div
@@ -36,20 +39,20 @@ export const ErrorDisplay: React.FC<Props> = ({
           width: '100%',
         }}
       >
-        <button
-          type="button"
-          onClick={onContinue}
-          style={standardButtonStyle}
+        <CameraButton
+          onFileSelected={
+            onRetakeFileSelected
+          }
         >
           撮り直し
-        </button>
+        </CameraButton>
 
         <button
           type="button"
-          onClick={onExit}
+          onClick={onLogout}
           style={standardButtonStyle}
         >
-          終了
+          ログアウト
         </button>
       </div>
     </div>

@@ -1,9 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useImageProcessor } from './useImageProcessor';
-import * as imageUtils from '../components/PreviewPhase/utils/compressImage';
+import * as imageUtils from '../utils/compressImage';
 
-vi.mock('../components/PreviewPhase/utils/compressImage', () => ({
+vi.mock('../utils/compressImage', () => ({
   compressImage: vi.fn(),
 }));
 

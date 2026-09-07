@@ -1,5 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
 import { ErrorDisplay } from './ErrorDisplay';
 
 describe('ErrorDisplay', () => {
@@ -9,12 +20,12 @@ describe('ErrorDisplay', () => {
       render(
         <ErrorDisplay
           error={
-            new Error(
-              '送信処理に失敗しました',
-            )
+            new Error('送信処理に失敗しました')
           }
-          onContinue={vi.fn()}
-          onExit={vi.fn()}
+          onRetakeFileSelected={
+            vi.fn().mockResolvedValue(undefined)
+          }
+          onLogout={vi.fn()}
         />,
       );
 
@@ -37,16 +48,14 @@ describe('ErrorDisplay', () => {
     () => {
       render(
         <ErrorDisplay
-          onContinue={vi.fn()}
-          onExit={vi.fn()}
+          onRetakeFileSelected={
+            vi.fn().mockResolvedValue(undefined)
+          }
+          onLogout={vi.fn()}
         />,
       );
 
-      expect(
-        screen.queryByText(
-          '送信処理に失敗しました',
-        ),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText('送信処理に失敗しました')).not.toBeInTheDocument();
     },
   );
 
@@ -55,15 +64,14 @@ describe('ErrorDisplay', () => {
     () => {
       const { container } = render(
         <ErrorDisplay
-          onContinue={vi.fn()}
-          onExit={vi.fn()}
+          onRetakeFileSelected={
+            vi.fn().mockResolvedValue(undefined)
+          }
+          onLogout={vi.fn()}
         />,
       );
 
-      const display =
-        container.querySelector(
-          '.error-display',
-        );
+      const display = container.querySelector('.error-display');
 
       expect(display).toHaveStyle({
         maxWidth: '375px',
@@ -76,8 +84,7 @@ describe('ErrorDisplay', () => {
           name: '撮り直し',
         });
 
-      const buttonGroup =
-        retakeButton.parentElement;
+      const buttonGroup = retakeButton.parentElement;
 
       expect(buttonGroup).not.toBeNull();
 
@@ -91,60 +98,75 @@ describe('ErrorDisplay', () => {
   );
 
   it(
-    'calls onContinue when the retake button is clicked',
-    () => {
-      const onContinue = vi.fn();
-      const onExit = vi.fn();
+    'passes the selected file to onRetakeFileSelected',
+    async () => {
+      const onRetakeFileSelected = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
-      render(
+      const onLogout = vi.fn();
+
+      const { container } = render(
         <ErrorDisplay
-          onContinue={onContinue}
-          onExit={onExit}
+          onRetakeFileSelected={
+            onRetakeFileSelected
+          }
+          onLogout={onLogout}
         />,
       );
 
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: '撮り直し',
-        }),
+      const input = container.querySelector<HTMLInputElement>('input[type="file"]' );
+
+      expect(input).not.toBeNull();
+
+      const file = new File(
+        ['image data'],
+        'photo.jpg',
+        {
+          type: 'image/jpeg',
+        },
       );
 
-      expect(
-        onContinue,
-      ).toHaveBeenCalledTimes(1);
+      fireEvent.change(input!, {
+        target: {
+          files: [file],
+        },
+      });
 
-      expect(
-        onExit,
-      ).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(
+          onRetakeFileSelected,
+        ).toHaveBeenCalledWith(file);
+      });
+
+      expect(onRetakeFileSelected).toHaveBeenCalledTimes(1);
+      expect(onLogout).not.toHaveBeenCalled();
     },
   );
 
   it(
-    'calls onExit when the exit button is clicked',
+    'calls onLogout when the logout button is clicked',
     () => {
-      const onContinue = vi.fn();
-      const onExit = vi.fn();
+      const onRetakeFileSelected = vi.fn().mockResolvedValue(undefined);
+      const onLogout = vi.fn();
 
       render(
         <ErrorDisplay
-          onContinue={onContinue}
-          onExit={onExit}
+          onRetakeFileSelected={
+            onRetakeFileSelected
+          }
+          onLogout={onLogout}
         />,
       );
 
       fireEvent.click(
         screen.getByRole('button', {
-          name: '終了',
+          name: 'ログアウト',
         }),
       );
 
-      expect(
-        onExit,
-      ).toHaveBeenCalledTimes(1);
-
-      expect(
-        onContinue,
-      ).not.toHaveBeenCalled();
+      expect(onLogout).toHaveBeenCalledTimes(1);
+      expect(onRetakeFileSelected).not.toHaveBeenCalled();
     },
   );
 });
