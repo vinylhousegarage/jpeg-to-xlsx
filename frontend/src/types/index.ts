@@ -41,14 +41,10 @@ export type AppAction =
       file: Blob;
       shotNumber: string;
     }
-  | { type: 'RETAKE' }
   | { type: 'SEND' }
-  | { type: 'EXIT' }
   | { type: 'START_UPLOAD' }
   | {
       type: 'UPLOAD_COMPLETE';
       status: 'success' | 'error';
       error?: Error;
     }
-  | { type: 'CONTINUE' };
-  

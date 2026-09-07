@@ -21,16 +21,6 @@ export const appReducer = (
         },
       };
 
-    case 'RETAKE':
-    case 'CONTINUE':
-    case 'EXIT':
-      return {
-        ...state,
-        phase: {
-          type: 'input',
-        },
-      };
-
     case 'SEND':
       if (state.phase.type !== 'preview') {
         return state;

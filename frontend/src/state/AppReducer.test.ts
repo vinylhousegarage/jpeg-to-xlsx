@@ -104,28 +104,4 @@ describe('appReducer', () => {
       },
     });
   });
-
-  it('should handle EXIT and preserve Slack linked state', () => {
-    const previewState: AppState = {
-      isSlackLinked: true,
-      phase: {
-        type: 'preview',
-        shotNumber: 'SHOT-001',
-        file: new File([''], 'test.png'),
-      },
-    };
-
-    const action: AppAction = {
-      type: 'EXIT',
-    };
-
-    const state = appReducer(previewState, action);
-
-    expect(state).toEqual({
-      isSlackLinked: true,
-      phase: {
-        type: 'input',
-      },
-    });
-  });
 });
