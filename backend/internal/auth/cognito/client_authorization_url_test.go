@@ -20,41 +20,24 @@ func TestClientAuthorizationURL(
 
 	client, err := NewClient(config)
 	if err != nil {
-		t.Fatalf(
-			"NewClient() error = %v",
-			err,
-		)
+		t.Fatalf("NewClient() error = %v", err)
 	}
 
 	state := newTestOAuthState()
 
-	authorizationURL, err :=
-		client.AuthorizationURL(state)
+	authorizationURL, err := client.AuthorizationURL(state)
 	if err != nil {
-		t.Fatalf(
-			"AuthorizationURL() error = %v",
-			err,
-		)
+		t.Fatalf("AuthorizationURL() error = %v", err)
 	}
 
-	parsedURL, err := url.Parse(
-		authorizationURL,
-	)
+	parsedURL, err := url.Parse(authorizationURL)
 	if err != nil {
-		t.Fatalf(
-			"parse authorization URL: %v",
-			err,
-		)
+		t.Fatalf("parse authorization URL: %v", err)
 	}
 
-	expectedEndpoint, err := url.Parse(
-		server.authorizationEndpoint(),
-	)
+	expectedEndpoint, err := url.Parse(server.authorizationEndpoint())
 	if err != nil {
-		t.Fatalf(
-			"parse expected authorization endpoint: %v",
-			err,
-		)
+		t.Fatalf("parse expected authorization endpoint: %v", err)
 	}
 
 	if parsedURL.Scheme != expectedEndpoint.Scheme {
@@ -83,70 +66,25 @@ func TestClientAuthorizationURL(
 
 	query := parsedURL.Query()
 
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"response_type",
-		"code",
-	)
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"client_id",
-		testClientID,
-	)
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"redirect_uri",
-		testRedirectURI,
-	)
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"scope",
-		strings.Join(config.Scopes, " "),
-	)
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"state",
-		state.Value,
-	)
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"nonce",
-		state.Nonce,
-	)
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"code_challenge",
-		codeChallenge(
-			state.CodeVerifier,
-		),
-	)
-	assertAuthorizationQueryValue(
-		t,
-		query,
-		"code_challenge_method",
-		"S256",
-	)
+	assertAuthorizationQueryValue(t, query, "response_type", "code")
+	assertAuthorizationQueryValue(t, query, "client_id", testClientID)
+	assertAuthorizationQueryValue(t, query, "redirect_uri", testRedirectURI)
+	assertAuthorizationQueryValue(t, query, "scope", strings.Join(config.Scopes, " "))
+	assertAuthorizationQueryValue(t, query, "state", state.Value)
+	assertAuthorizationQueryValue(t, query, "nonce", state.Nonce)
+	assertAuthorizationQueryValue(t, query, "identity_provider", "Google")
+	assertAuthorizationQueryValue(t, query, "code_challenge", codeChallenge(state.CodeVerifier))
+	assertAuthorizationQueryValue(t, query, "code_challenge_method", "S256")
 
 	if query.Has("client_secret") {
-		t.Errorf(
-			"authorization URL contains client_secret query parameter",
-		)
+		t.Errorf("authorization URL contains client_secret query parameter")
 	}
 
 	if strings.Contains(
 		authorizationURL,
 		testClientSecret,
 	) {
-		t.Errorf(
-			"authorization URL contains the client secret",
-		)
+		t.Errorf("authorization URL contains the client secret")
 	}
 }
 
@@ -186,29 +124,19 @@ func TestClientAuthorizationURLRejectsInvalidState(
 		{
 			name: "code verifier shorter than 43 characters",
 			mutate: func(state *oauthstate.State) {
-				state.CodeVerifier = strings.Repeat(
-					"v",
-					42,
-				)
+				state.CodeVerifier = strings.Repeat("v", 42)
 			},
 		},
 		{
 			name: "code verifier longer than 128 characters",
 			mutate: func(state *oauthstate.State) {
-				state.CodeVerifier = strings.Repeat(
-					"v",
-					129,
-				)
+				state.CodeVerifier = strings.Repeat("v", 129)
 			},
 		},
 		{
 			name: "code verifier contains invalid character",
 			mutate: func(state *oauthstate.State) {
-				state.CodeVerifier =
-					strings.Repeat(
-						"v",
-						42,
-					) + "*"
+				state.CodeVerifier = strings.Repeat("v", 42) + "*"
 			},
 		},
 		{
@@ -226,8 +154,6 @@ func TestClientAuthorizationURLRejectsInvalidState(
 	}
 
 	for _, test := range tests {
-		test := test
-
 		t.Run(
 			test.name,
 			func(t *testing.T) {
@@ -236,35 +162,22 @@ func TestClientAuthorizationURLRejectsInvalidState(
 				server := newTestOAuthServer(t)
 
 				client, err := NewClient(
-					newTestClientConfig(
-						server,
-					),
+					newTestClientConfig(server),
 				)
 				if err != nil {
-					t.Fatalf(
-						"NewClient() error = %v",
-						err,
-					)
+					t.Fatalf("NewClient() error = %v", err)
 				}
 
 				state := newTestOAuthState()
 				test.mutate(&state)
 
-				authorizationURL, err :=
-					client.AuthorizationURL(
-						state,
-					)
+				authorizationURL, err := client.AuthorizationURL(state)
 				if err == nil {
-					t.Fatal(
-						"AuthorizationURL() error = nil, want an error",
-					)
+					t.Fatal("AuthorizationURL() error = nil, want an error")
 				}
 
 				if authorizationURL != "" {
-					t.Errorf(
-						"AuthorizationURL() URL = %q, want empty",
-						authorizationURL,
-					)
+					t.Errorf("AuthorizationURL() URL = %q, want empty", authorizationURL)
 				}
 			},
 		)
@@ -281,10 +194,7 @@ func assertAuthorizationQueryValue(
 
 	values, exists := query[name]
 	if !exists {
-		t.Errorf(
-			"authorization URL query %q is missing",
-			name,
-		)
+		t.Errorf("authorization URL query %q is missing", name)
 
 		return
 	}
@@ -312,11 +222,7 @@ func assertAuthorizationQueryValue(
 func codeChallenge(
 	codeVerifier string,
 ) string {
-	digest := sha256.Sum256(
-		[]byte(codeVerifier),
-	)
+	digest := sha256.Sum256([]byte(codeVerifier))
 
-	return base64.RawURLEncoding.EncodeToString(
-		digest[:],
-	)
+	return base64.RawURLEncoding.EncodeToString(digest[:])
 }

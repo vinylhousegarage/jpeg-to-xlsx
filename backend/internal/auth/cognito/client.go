@@ -152,6 +152,10 @@ func (c *Client) AuthorizationURL(
 			"nonce",
 			state.Nonce,
 		),
+		oauth2.SetAuthURLParam(
+			"identity_provider",
+			"Google",
+		),
 	), nil
 }
 
