@@ -13,6 +13,10 @@ import (
 const (
 	testCognitoSub    = "test-cognito-sub"
 	testSessionIDHash = "test-session-id-hash"
+	testLogoutURL     = "https://example.auth.ap-northeast-1." +
+		"amazoncognito.com/logout?" +
+		"client_id=test-client-id&" +
+		"logout_uri=https%3A%2F%2Fexample.com%2F"
 )
 
 var (
@@ -27,9 +31,7 @@ var (
 		time.UTC,
 	)
 
-	testSessionExpiresAt = testSessionCreatedAt.Add(
-		time.Hour,
-	)
+	testSessionExpiresAt = testSessionCreatedAt.Add(time.Hour)
 )
 
 type fakeSessionResolver struct {
@@ -40,9 +42,7 @@ type fakeSessionResolver struct {
 	receivedRequest *http.Request
 }
 
-func (
-	resolver *fakeSessionResolver,
-) Resolve(
+func (resolver *fakeSessionResolver) Resolve(
 	ctx context.Context,
 	request *http.Request,
 ) (
@@ -67,16 +67,13 @@ type fakeSessionStore struct {
 	receivedSessionHash string
 }
 
-func (
-	store *fakeSessionStore,
-) Delete(
+func (store *fakeSessionStore) Delete(
 	ctx context.Context,
 	sessionIDHash string,
 ) error {
 	store.deleteCalls++
 	store.receivedCtx = ctx
-	store.receivedSessionHash =
-		sessionIDHash
+	store.receivedSessionHash = sessionIDHash
 
 	return store.deleteErr
 }
@@ -86,19 +83,37 @@ type fakeCookieDeleter struct {
 	receivedWriter http.ResponseWriter
 }
 
-func (
-	deleter *fakeCookieDeleter,
-) Delete(
+func (deleter *fakeCookieDeleter) Delete(
 	writer http.ResponseWriter,
 ) {
 	deleter.deleteCalls++
 	deleter.receivedWriter = writer
 }
 
+type fakeLogoutURLProvider struct {
+	logoutURL string
+	err       error
+	calls     int
+}
+
+func (provider *fakeLogoutURLProvider) LogoutURL() (
+	string,
+	error,
+) {
+	provider.calls++
+
+	if provider.err != nil {
+		return "", provider.err
+	}
+
+	return provider.logoutURL, nil
+}
+
 type testDependencies struct {
-	resolver      *fakeSessionResolver
-	store         *fakeSessionStore
-	cookieDeleter *fakeCookieDeleter
+	resolver          *fakeSessionResolver
+	store             *fakeSessionStore
+	cookieDeleter     *fakeCookieDeleter
+	logoutURLProvider *fakeLogoutURLProvider
 }
 
 func newTestDependencies() *testDependencies {
@@ -113,6 +128,9 @@ func newTestDependencies() *testDependencies {
 		},
 		store:         &fakeSessionStore{},
 		cookieDeleter: &fakeCookieDeleter{},
+		logoutURLProvider: &fakeLogoutURLProvider{
+			logoutURL: testLogoutURL,
+		},
 	}
 }
 
@@ -126,20 +144,16 @@ func newTestHandler(
 		dependencies.resolver,
 		dependencies.store,
 		dependencies.cookieDeleter,
+		dependencies.logoutURLProvider,
 	)
 	if err != nil {
-		t.Fatalf(
-			"NewHandler() error = %v",
-			err,
-		)
+		t.Fatalf("NewHandler() error = %v", err)
 	}
 
 	return handler
 }
 
-func newTestRequest(
-	t *testing.T,
-) *http.Request {
+func newTestRequest(t *testing.T) *http.Request {
 	t.Helper()
 
 	return httptest.NewRequest(

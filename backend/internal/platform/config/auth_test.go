@@ -5,21 +5,15 @@ import (
 	"testing"
 )
 
-func TestLoadBFFAuthConfig(
-	t *testing.T,
-) {
+func TestLoadBFFAuthConfig(t *testing.T) {
 	setValidBFFAuthEnvironment(t)
 
 	config, err := loadBFFAuthConfig()
 	if err != nil {
-		t.Fatalf(
-			"loadBFFAuthConfig() error = %v",
-			err,
-		)
+		t.Fatalf("loadBFFAuthConfig() error = %v", err)
 	}
 
-	if config.CognitoClientID !=
-		testCognitoClientID {
+	if config.CognitoClientID != testCognitoClientID {
 		t.Errorf(
 			"CognitoClientID = %q, want %q",
 			config.CognitoClientID,
@@ -27,8 +21,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.CognitoClientSecretARN !=
-		testCognitoClientSecretARN {
+	if config.CognitoClientSecretARN != testCognitoClientSecretARN {
 		t.Errorf(
 			"CognitoClientSecretARN = %q, want %q",
 			config.CognitoClientSecretARN,
@@ -36,8 +29,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.CognitoIssuer !=
-		testCognitoIssuer {
+	if config.CognitoIssuer != testCognitoIssuer {
 		t.Errorf(
 			"CognitoIssuer = %q, want %q",
 			config.CognitoIssuer,
@@ -45,8 +37,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.CognitoAuthorizationEndpoint !=
-		testCognitoAuthorizationEndpoint {
+	if config.CognitoAuthorizationEndpoint != testCognitoAuthorizationEndpoint {
 		t.Errorf(
 			"CognitoAuthorizationEndpoint = %q, want %q",
 			config.CognitoAuthorizationEndpoint,
@@ -54,8 +45,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.CognitoTokenEndpoint !=
-		testCognitoTokenEndpoint {
+	if config.CognitoTokenEndpoint != testCognitoTokenEndpoint {
 		t.Errorf(
 			"CognitoTokenEndpoint = %q, want %q",
 			config.CognitoTokenEndpoint,
@@ -63,8 +53,15 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.CognitoRedirectURI !=
-		testCognitoRedirectURI {
+	if config.CognitoLogoutEndpoint != testCognitoLogoutEndpoint {
+		t.Errorf(
+			"CognitoLogoutEndpoint = %q, want %q",
+			config.CognitoLogoutEndpoint,
+			testCognitoLogoutEndpoint,
+		)
+	}
+
+	if config.CognitoRedirectURI != testCognitoRedirectURI {
 		t.Errorf(
 			"CognitoRedirectURI = %q, want %q",
 			config.CognitoRedirectURI,
@@ -72,8 +69,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.PostLoginRedirectURL !=
-		testPostLoginRedirectURL {
+	if config.PostLoginRedirectURL != testPostLoginRedirectURL {
 		t.Errorf(
 			"PostLoginRedirectURL = %q, want %q",
 			config.PostLoginRedirectURL,
@@ -81,8 +77,15 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.OAuthStateTableName !=
-		testOAuthStateTableName {
+	if config.PostLogoutRedirectURL != testPostLogoutRedirectURL {
+		t.Errorf(
+			"PostLogoutRedirectURL = %q, want %q",
+			config.PostLogoutRedirectURL,
+			testPostLogoutRedirectURL,
+		)
+	}
+
+	if config.OAuthStateTableName != testOAuthStateTableName {
 		t.Errorf(
 			"OAuthStateTableName = %q, want %q",
 			config.OAuthStateTableName,
@@ -90,8 +93,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.OAuthStateTTL !=
-		defaultOAuthStateTTL {
+	if config.OAuthStateTTL != defaultOAuthStateTTL {
 		t.Errorf(
 			"OAuthStateTTL = %v, want %v",
 			config.OAuthStateTTL,
@@ -99,8 +101,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.SessionTableName !=
-		testAuthSessionTableName {
+	if config.SessionTableName != testAuthSessionTableName {
 		t.Errorf(
 			"SessionTableName = %q, want %q",
 			config.SessionTableName,
@@ -108,8 +109,7 @@ func TestLoadBFFAuthConfig(
 		)
 	}
 
-	if config.SessionLifetime !=
-		defaultAuthSessionLifetime {
+	if config.SessionLifetime != defaultAuthSessionLifetime {
 		t.Errorf(
 			"SessionLifetime = %v, want %v",
 			config.SessionLifetime,
@@ -118,17 +118,17 @@ func TestLoadBFFAuthConfig(
 	}
 }
 
-func TestLoadBFFAuthConfigRejectsMissingEnvironment(
-	t *testing.T,
-) {
+func TestLoadBFFAuthConfigRejectsMissingEnvironment(t *testing.T) {
 	requiredEnvironmentNames := []string{
 		"COGNITO_CLIENT_ID",
 		"COGNITO_CLIENT_SECRET_ARN",
 		"COGNITO_ISSUER",
 		"COGNITO_AUTHORIZATION_ENDPOINT",
 		"COGNITO_TOKEN_ENDPOINT",
+		"COGNITO_LOGOUT_ENDPOINT",
 		"COGNITO_REDIRECT_URI",
 		"AUTH_REDIRECT_URL",
+		"AUTH_LOGOUT_REDIRECT_URL",
 		"COGNITO_OAUTH_STATE_TABLE_NAME",
 		"AUTH_SESSION_TABLE_NAME",
 	}
@@ -139,35 +139,20 @@ func TestLoadBFFAuthConfigRejectsMissingEnvironment(
 			func(t *testing.T) {
 				setValidBFFAuthEnvironment(t)
 
-				t.Setenv(
-					environmentName,
-					"",
-				)
+				t.Setenv(environmentName, "")
 
-				config, err :=
-					loadBFFAuthConfig()
+				config, err := loadBFFAuthConfig()
 				if err == nil {
-					t.Fatal(
-						"loadBFFAuthConfig() error = nil, want an error",
-					)
+					t.Fatal("loadBFFAuthConfig() error = nil, want an error")
 				}
 
-				if config !=
-					(BFFAuthConfig{}) {
-					t.Errorf(
-						"loadBFFAuthConfig() config = %+v, want zero value",
-						config,
-					)
+				if config != (BFFAuthConfig{}) {
+					t.Errorf("loadBFFAuthConfig() config = %+v, want zero value", config)
 				}
 
-				wantError :=
-					environmentName +
-						" is required"
+				wantError := environmentName + " is required"
 
-				if !strings.Contains(
-					err.Error(),
-					wantError,
-				) {
+				if !strings.Contains(err.Error(), wantError) {
 					t.Errorf(
 						"loadBFFAuthConfig() error = %q, want to contain %q",
 						err,

@@ -4,71 +4,57 @@ func loadBFFAuthConfig() (
 	BFFAuthConfig,
 	error,
 ) {
-	cognitoClientID, err := loadRequiredEnv(
-		"COGNITO_CLIENT_ID",
-	)
+	cognitoClientID, err := loadRequiredEnv("COGNITO_CLIENT_ID")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	cognitoClientSecretARN, err :=
-		loadRequiredEnv(
-			"COGNITO_CLIENT_SECRET_ARN",
-		)
+	cognitoClientSecretARN, err := loadRequiredEnv("COGNITO_CLIENT_SECRET_ARN")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	cognitoIssuer, err := loadRequiredEnv(
-		"COGNITO_ISSUER",
-	)
+	cognitoIssuer, err := loadRequiredEnv("COGNITO_ISSUER")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	cognitoAuthorizationEndpoint, err :=
-		loadRequiredEnv(
-			"COGNITO_AUTHORIZATION_ENDPOINT",
-		)
+	cognitoAuthorizationEndpoint, err := loadRequiredEnv("COGNITO_AUTHORIZATION_ENDPOINT")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	cognitoTokenEndpoint, err :=
-		loadRequiredEnv(
-			"COGNITO_TOKEN_ENDPOINT",
-		)
+	cognitoTokenEndpoint, err := loadRequiredEnv("COGNITO_TOKEN_ENDPOINT")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	cognitoRedirectURI, err :=
-		loadRequiredEnv(
-			"COGNITO_REDIRECT_URI",
-		)
+	cognitoLogoutEndpoint, err := loadRequiredEnv("COGNITO_LOGOUT_ENDPOINT")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	postLoginRedirectURL, err :=
-		loadRequiredEnv(
-			"AUTH_REDIRECT_URL",
-		)
+	cognitoRedirectURI, err := loadRequiredEnv("COGNITO_REDIRECT_URI")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	oauthStateTableName, err :=
-		loadRequiredEnv(
-			"COGNITO_OAUTH_STATE_TABLE_NAME",
-		)
+	postLoginRedirectURL, err := loadRequiredEnv("AUTH_REDIRECT_URL")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
 
-	sessionTableName, err := loadRequiredEnv(
-		"AUTH_SESSION_TABLE_NAME",
-	)
+	postLogoutRedirectURL, err := loadRequiredEnv("AUTH_LOGOUT_REDIRECT_URL")
+	if err != nil {
+		return BFFAuthConfig{}, err
+	}
+
+	oauthStateTableName, err := loadRequiredEnv("COGNITO_OAUTH_STATE_TABLE_NAME")
+	if err != nil {
+		return BFFAuthConfig{}, err
+	}
+
+	sessionTableName, err := loadRequiredEnv("AUTH_SESSION_TABLE_NAME")
 	if err != nil {
 		return BFFAuthConfig{}, err
 	}
@@ -79,8 +65,10 @@ func loadBFFAuthConfig() (
 		CognitoIssuer:                cognitoIssuer,
 		CognitoAuthorizationEndpoint: cognitoAuthorizationEndpoint,
 		CognitoTokenEndpoint:         cognitoTokenEndpoint,
+		CognitoLogoutEndpoint:        cognitoLogoutEndpoint,
 		CognitoRedirectURI:           cognitoRedirectURI,
 		PostLoginRedirectURL:         postLoginRedirectURL,
+		PostLogoutRedirectURL:        postLogoutRedirectURL,
 		OAuthStateTableName:          oauthStateTableName,
 		OAuthStateTTL:                defaultOAuthStateTTL,
 		SessionTableName:             sessionTableName,

@@ -63,9 +63,11 @@ type BFFAuthConfig struct {
 	CognitoIssuer                string
 	CognitoAuthorizationEndpoint string
 	CognitoTokenEndpoint         string
+	CognitoLogoutEndpoint        string
 	CognitoRedirectURI           string
 
-	PostLoginRedirectURL string
+	PostLoginRedirectURL  string
+	PostLogoutRedirectURL string
 
 	OAuthStateTableName string
 	OAuthStateTTL       time.Duration
