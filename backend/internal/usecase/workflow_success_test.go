@@ -44,7 +44,7 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 		},
 		&mockBedrockService{
 			resultMap: map[string]any{
-				"key": "value",
+				"company": "Anthropic",
 			},
 		},
 		slackNotifier,
@@ -92,20 +92,12 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 
 	sheet := file.GetSheetName(0)
 
-	if got, err := file.GetCellValue(sheet, "A1"); err != nil || got != "key" {
-		t.Errorf("A1 = %q, %v; want %q, nil", got, err, "key")
+	if got, err := file.GetCellValue(sheet, "A1"); err != nil || got != "company" {
+		t.Errorf("A1 = %q, %v; want %q, nil", got, err, "company")
 	}
 
-	if got, err := file.GetCellValue(sheet, "B1"); err != nil || got != "value" {
-		t.Errorf("B1 = %q, %v; want %q, nil", got, err, "value")
-	}
-
-	if got, err := file.GetCellValue(sheet, "A2"); err != nil || got != "key" {
-		t.Errorf("A2 = %q, %v; want %q, nil", got, err, "key")
-	}
-
-	if got, err := file.GetCellValue(sheet, "B2"); err != nil || got != "value" {
-		t.Errorf("B2 = %q, %v; want %q, nil", got, err, "value")
+	if got, err := file.GetCellValue(sheet, "B1"); err != nil || got != "Anthropic" {
+		t.Errorf("B1 = %q, %v; want %q, nil", got, err, "Anthropic")
 	}
 
 	if !slackNotifier.called {

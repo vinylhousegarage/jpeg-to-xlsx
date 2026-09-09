@@ -28,15 +28,8 @@ func Convert(jsonData []byte) ([]byte, error) {
 
 	sheet := file.GetSheetName(0)
 
-	if err := file.SetCellValue(sheet, "A1", "key"); err != nil {
-		return nil, fmt.Errorf("set key header: %w", err)
-	}
-	if err := file.SetCellValue(sheet, "B1", "value"); err != nil {
-		return nil, fmt.Errorf("set value header: %w", err)
-	}
-
 	for index, key := range keys {
-		row := index + 2
+		row := index + 1
 
 		value, err := valueToCell(values[key])
 		if err != nil {

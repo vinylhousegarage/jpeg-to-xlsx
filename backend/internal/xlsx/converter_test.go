@@ -37,27 +37,35 @@ func TestConvert(t *testing.T) {
 		cell string
 		want string
 	}{
-		{cell: "A1", want: "key"},
-		{cell: "B1", want: "value"},
-		{cell: "A2", want: "age"},
-		{cell: "B2", want: "30"},
-		{cell: "A3", want: "member"},
-		{cell: "B3", want: "true"},
-		{cell: "A4", want: "name"},
-		{cell: "B4", want: "山田太郎"},
-		{cell: "A5", want: "note"},
-		{cell: "B5", want: ""},
-		{cell: "A6", want: "tags"},
-		{cell: "B6", want: `["AWS","Go"]`},
+		{cell: "A1", want: "age"},
+		{cell: "B1", want: "30"},
+		{cell: "A2", want: "member"},
+		{cell: "B2", want: "true"},
+		{cell: "A3", want: "name"},
+		{cell: "B3", want: "山田太郎"},
+		{cell: "A4", want: "note"},
+		{cell: "B4", want: ""},
+		{cell: "A5", want: "tags"},
+		{cell: "B5", want: `["AWS","Go"]`},
 	}
 
 	for _, tt := range tests {
 		got, err := file.GetCellValue(sheet, tt.cell)
 		if err != nil {
-			t.Fatalf("get cell %s: %v", tt.cell, err)
+			t.Fatalf(
+				"get cell %s: %v",
+				tt.cell,
+				err,
+			)
 		}
+
 		if got != tt.want {
-			t.Errorf("cell %s = %q, want %q", tt.cell, got, tt.want)
+			t.Errorf(
+				"cell %s = %q, want %q",
+				tt.cell,
+				got,
+				tt.want,
+			)
 		}
 	}
 }
