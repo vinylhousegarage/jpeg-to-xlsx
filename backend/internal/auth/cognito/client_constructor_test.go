@@ -113,6 +113,38 @@ func TestNewClientRejectsInvalidConfig(
 			},
 		},
 		{
+			name: "empty logout endpoint",
+			mutate: func(config *Config) {
+				config.LogoutEndpoint = ""
+			},
+		},
+		{
+			name: "whitespace logout endpoint",
+			mutate: func(config *Config) {
+				config.LogoutEndpoint = "   "
+			},
+		},
+		{
+			name: "invalid logout endpoint",
+			mutate: func(config *Config) {
+				config.LogoutEndpoint = "://invalid"
+			},
+		},
+		{
+			name: "logout endpoint without scheme",
+			mutate: func(config *Config) {
+				config.LogoutEndpoint =
+					"example.com/logout"
+			},
+		},
+		{
+			name: "logout endpoint without host",
+			mutate: func(config *Config) {
+				config.LogoutEndpoint =
+					"https:///logout"
+			},
+		},
+		{
 			name: "empty redirect URI",
 			mutate: func(config *Config) {
 				config.RedirectURI = ""
@@ -137,6 +169,39 @@ func TestNewClientRejectsInvalidConfig(
 			mutate: func(config *Config) {
 				config.RedirectURI =
 					"https:///api/auth/callback"
+			},
+		},
+		{
+			name: "empty logout redirect URI",
+			mutate: func(config *Config) {
+				config.LogoutRedirectURI = ""
+			},
+		},
+		{
+			name: "whitespace logout redirect URI",
+			mutate: func(config *Config) {
+				config.LogoutRedirectURI = "   "
+			},
+		},
+		{
+			name: "invalid logout redirect URI",
+			mutate: func(config *Config) {
+				config.LogoutRedirectURI =
+					"://invalid"
+			},
+		},
+		{
+			name: "logout redirect URI without scheme",
+			mutate: func(config *Config) {
+				config.LogoutRedirectURI =
+					"example.com/"
+			},
+		},
+		{
+			name: "logout redirect URI without host",
+			mutate: func(config *Config) {
+				config.LogoutRedirectURI =
+					"https:///"
 			},
 		},
 		{

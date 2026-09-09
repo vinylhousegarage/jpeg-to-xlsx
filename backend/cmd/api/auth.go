@@ -69,7 +69,9 @@ func buildAuthHandlers(
 			ClientSecret:          clientSecret,
 			AuthorizationEndpoint: authConfig.CognitoAuthorizationEndpoint,
 			TokenEndpoint:         authConfig.CognitoTokenEndpoint,
+			LogoutEndpoint:        authConfig.CognitoLogoutEndpoint,
 			RedirectURI:           authConfig.CognitoRedirectURI,
+			LogoutRedirectURI:     authConfig.PostLogoutRedirectURL,
 			Scopes: []string{
 				"openid",
 				"email",
@@ -192,6 +194,7 @@ func buildAuthHandlers(
 		sessionResolver,
 		sessionStore,
 		cookieManager,
+		cognitoClient,
 	)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
