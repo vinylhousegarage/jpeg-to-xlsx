@@ -23,6 +23,7 @@ export type AuthResources = {
   issuer: string;
   authorizationEndpoint: string;
   tokenEndpoint: string;
+  logoutEndpoint: string;
   redirectUri: string;
 };
 
@@ -174,17 +175,11 @@ export const createAuthResources = (
 
   // Cognito関連URI
 
-  const googleRedirectUri =
-    `${userPoolDomain.baseUrl()}/oauth2/idpresponse`;
-
-  const issuer =
-    `https://cognito-idp.${stack.region}.${stack.urlSuffix}/${userPool.userPoolId}`;
-
-  const authorizationEndpoint =
-    `${userPoolDomain.baseUrl()}/oauth2/authorize`;
-
-  const tokenEndpoint =
-    `${userPoolDomain.baseUrl()}/oauth2/token`;
+  const googleRedirectUri = `${userPoolDomain.baseUrl()}/oauth2/idpresponse`;
+  const issuer = `https://cognito-idp.${stack.region}.${stack.urlSuffix}/${userPool.userPoolId}`;
+  const authorizationEndpoint = `${userPoolDomain.baseUrl()}/oauth2/authorize`;
+  const tokenEndpoint = `${userPoolDomain.baseUrl()}/oauth2/token`;
+  const logoutEndpoint = `${userPoolDomain.baseUrl()}/logout`;
 
   return {
     userPool,
@@ -198,6 +193,7 @@ export const createAuthResources = (
     issuer,
     authorizationEndpoint,
     tokenEndpoint,
+    logoutEndpoint,
     redirectUri,
   };
 };

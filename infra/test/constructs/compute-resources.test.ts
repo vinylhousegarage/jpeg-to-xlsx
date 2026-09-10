@@ -36,6 +36,10 @@ const testCognitoTokenEndpoint =
   'https://test.auth.ap-northeast-1.' +
   'amazoncognito.com/oauth2/token';
 
+const testCognitoLogoutEndpoint =
+  'https://test.auth.ap-northeast-1.' +
+  'amazoncognito.com/logout';
+
 const testCognitoRedirectUri = `${testApplicationUrl}/api/auth/callback`;
 const testOAuthStateTableName = 'test-cognito-oauth-states';
 const testSessionTableName = 'test-auth-sessions';
@@ -45,21 +49,9 @@ describe('createComputeResources', () => {
 
   beforeAll(() => {
     const stack = createTestStack('ComputeResourcesTestStack');
-
-    const inputBucket = new s3.Bucket(
-      stack,
-      'InputBucket',
-    );
-
-    const outputBucket = new s3.Bucket(
-      stack,
-      'OutputBucket',
-    );
-
-    const slackSecret = new secretsmanager.Secret(
-      stack,
-      'SlackClientSecret',
-    );
+    const inputBucket = new s3.Bucket(stack, 'InputBucket');
+    const outputBucket = new s3.Bucket(stack, 'OutputBucket');
+    const slackSecret = new secretsmanager.Secret(stack, 'SlackClientSecret');
 
     const slackTokenTable = new dynamodb.Table(
       stack,
@@ -78,22 +70,24 @@ describe('createComputeResources', () => {
       {
         appEnv: testAppEnv,
         bedrockModelId: testBedrockModelId,
-        promptFileName: testPromptFileName,
-        slackClientId: testSlackClientId,
-        slackRedirectUri: testSlackRedirectUri,
-        inputBucket,
-        outputBucket,
-        slackSecret,
-        slackTokenTable,
+        cognitoAuthorizationEndpoint: testCognitoAuthorizationEndpoint,
         cognitoClientId: testCognitoClientId,
         cognitoClientSecretArn: testCognitoClientSecretArn,
         cognitoIssuer: testCognitoIssuer,
-        cognitoAuthorizationEndpoint: testCognitoAuthorizationEndpoint,
-        cognitoTokenEndpoint: testCognitoTokenEndpoint,
+        cognitoLogoutEndpoint: testCognitoLogoutEndpoint,
         cognitoRedirectUri: testCognitoRedirectUri,
-        postLoginRedirectUrl: testApplicationUrl,
+        cognitoTokenEndpoint: testCognitoTokenEndpoint,
+        inputBucket,
         oauthStateTableName: testOAuthStateTableName,
+        outputBucket,
+        postLoginRedirectUrl: testApplicationUrl,
+        postLogoutRedirectUrl: testApplicationUrl,
+        promptFileName: testPromptFileName,
         sessionTableName: testSessionTableName,
+        slackClientId: testSlackClientId,
+        slackRedirectUri: testSlackRedirectUri,
+        slackSecret,
+        slackTokenTable,
       },
     );
 
@@ -101,10 +95,7 @@ describe('createComputeResources', () => {
   });
 
   test('creates API and processor Lambda functions', () => {
-    template.resourceCountIs(
-      'AWS::Lambda::Function',
-      2,
-    );
+    template.resourceCountIs('AWS::Lambda::Function', 2);
   });
 
   test('creates API Lambda function', () => {
@@ -118,20 +109,22 @@ describe('createComputeResources', () => {
         Environment: {
           Variables: Match.objectLike({
             APP_ENV: testAppEnv,
+            AUTH_LOGOUT_REDIRECT_URL: testApplicationUrl,
+            AUTH_REDIRECT_URL: testApplicationUrl,
+            AUTH_SESSION_TABLE_NAME: testSessionTableName,
+            COGNITO_AUTHORIZATION_ENDPOINT: testCognitoAuthorizationEndpoint,
+            COGNITO_CLIENT_ID: testCognitoClientId,
+            COGNITO_CLIENT_SECRET_ARN: testCognitoClientSecretArn,
+            COGNITO_ISSUER: testCognitoIssuer,
+            COGNITO_LOGOUT_ENDPOINT: testCognitoLogoutEndpoint,
+            COGNITO_OAUTH_STATE_TABLE_NAME: testOAuthStateTableName,
+            COGNITO_REDIRECT_URI: testCognitoRedirectUri,
+            COGNITO_TOKEN_ENDPOINT: testCognitoTokenEndpoint,
             INPUT_BUCKET_NAME: Match.anyValue(),
             SLACK_CLIENT_ID: testSlackClientId,
             SLACK_CLIENT_SECRET_ARN: Match.anyValue(),
             SLACK_REDIRECT_URI: testSlackRedirectUri,
             SLACK_TOKEN_TABLE_NAME: Match.anyValue(),
-            COGNITO_CLIENT_ID: testCognitoClientId,
-            COGNITO_CLIENT_SECRET_ARN: testCognitoClientSecretArn,
-            COGNITO_ISSUER: testCognitoIssuer,
-            COGNITO_AUTHORIZATION_ENDPOINT: testCognitoAuthorizationEndpoint,
-            COGNITO_TOKEN_ENDPOINT: testCognitoTokenEndpoint,
-            COGNITO_REDIRECT_URI: testCognitoRedirectUri,
-            AUTH_REDIRECT_URL: testApplicationUrl,
-            COGNITO_OAUTH_STATE_TABLE_NAME: testOAuthStateTableName,
-            AUTH_SESSION_TABLE_NAME: testSessionTableName,
           }),
         },
       }),
@@ -213,15 +206,17 @@ describe('createComputeResources', () => {
         Timeout: 30,
         Environment: {
           Variables: Match.objectLike({
+            AUTH_LOGOUT_REDIRECT_URL: Match.absent(),
+            AUTH_REDIRECT_URL: Match.absent(),
+            AUTH_SESSION_TABLE_NAME: Match.absent(),
+            COGNITO_AUTHORIZATION_ENDPOINT: Match.absent(),
             COGNITO_CLIENT_ID: Match.absent(),
             COGNITO_CLIENT_SECRET_ARN: Match.absent(),
             COGNITO_ISSUER: Match.absent(),
-            COGNITO_AUTHORIZATION_ENDPOINT: Match.absent(),
-            COGNITO_TOKEN_ENDPOINT: Match.absent(),
-            COGNITO_REDIRECT_URI: Match.absent(),
+            COGNITO_LOGOUT_ENDPOINT: Match.absent(),
             COGNITO_OAUTH_STATE_TABLE_NAME: Match.absent(),
-            AUTH_REDIRECT_URL: Match.absent(),
-            AUTH_SESSION_TABLE_NAME: Match.absent(),
+            COGNITO_REDIRECT_URI: Match.absent(),
+            COGNITO_TOKEN_ENDPOINT: Match.absent(),
           }),
         },
       }),
