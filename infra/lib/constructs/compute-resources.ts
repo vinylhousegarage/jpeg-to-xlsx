@@ -8,22 +8,24 @@ import { Construct } from 'constructs';
 export type ComputeResourcesProps = {
   appEnv: string;
   bedrockModelId: string;
-  promptFileName: string;
-  slackClientId: string;
-  slackRedirectUri: string;
-  inputBucket: s3.IBucket;
-  outputBucket: s3.IBucket;
-  slackSecret: secretsmanager.ISecret;
-  slackTokenTable: dynamodb.ITable;
+  cognitoAuthorizationEndpoint: string;
   cognitoClientId: string;
   cognitoClientSecretArn: string;
   cognitoIssuer: string;
-  cognitoAuthorizationEndpoint: string;
-  cognitoTokenEndpoint: string;
+  cognitoLogoutEndpoint: string;
   cognitoRedirectUri: string;
-  postLoginRedirectUrl: string;
+  cognitoTokenEndpoint: string;
+  inputBucket: s3.IBucket;
   oauthStateTableName: string;
+  outputBucket: s3.IBucket;
+  postLoginRedirectUrl: string;
+  postLogoutRedirectUrl: string;
+  promptFileName: string;
   sessionTableName: string;
+  slackClientId: string;
+  slackRedirectUri: string;
+  slackSecret: secretsmanager.ISecret;
+  slackTokenTable: dynamodb.ITable;
 };
 
 export type ComputeResources = {
@@ -48,20 +50,22 @@ export const createComputeResources = (
       timeout: cdk.Duration.seconds(15),
       environment: {
         APP_ENV: props.appEnv,
+        AUTH_LOGOUT_REDIRECT_URL: props.postLogoutRedirectUrl,
+        AUTH_REDIRECT_URL: props.postLoginRedirectUrl,
+        AUTH_SESSION_TABLE_NAME: props.sessionTableName,
+        COGNITO_AUTHORIZATION_ENDPOINT: props.cognitoAuthorizationEndpoint,
+        COGNITO_CLIENT_ID: props.cognitoClientId,
+        COGNITO_CLIENT_SECRET_ARN: props.cognitoClientSecretArn,
+        COGNITO_ISSUER: props.cognitoIssuer,
+        COGNITO_LOGOUT_ENDPOINT: props.cognitoLogoutEndpoint,
+        COGNITO_OAUTH_STATE_TABLE_NAME: props.oauthStateTableName,
+        COGNITO_REDIRECT_URI: props.cognitoRedirectUri,
+        COGNITO_TOKEN_ENDPOINT: props.cognitoTokenEndpoint,
         INPUT_BUCKET_NAME: props.inputBucket.bucketName,
         SLACK_CLIENT_ID: props.slackClientId,
         SLACK_CLIENT_SECRET_ARN: props.slackSecret.secretArn,
         SLACK_REDIRECT_URI: props.slackRedirectUri,
         SLACK_TOKEN_TABLE_NAME: props.slackTokenTable.tableName,
-        COGNITO_CLIENT_ID: props.cognitoClientId,
-        COGNITO_CLIENT_SECRET_ARN: props.cognitoClientSecretArn,
-        COGNITO_ISSUER: props.cognitoIssuer,
-        COGNITO_AUTHORIZATION_ENDPOINT: props.cognitoAuthorizationEndpoint,
-        COGNITO_TOKEN_ENDPOINT: props.cognitoTokenEndpoint,
-        COGNITO_REDIRECT_URI: props.cognitoRedirectUri,
-        AUTH_REDIRECT_URL: props.postLoginRedirectUrl,
-        COGNITO_OAUTH_STATE_TABLE_NAME: props.oauthStateTableName,
-        AUTH_SESSION_TABLE_NAME: props.sessionTableName,
       },
     },
   );
@@ -79,9 +83,9 @@ export const createComputeResources = (
       timeout: cdk.Duration.seconds(30),
       environment: {
         APP_ENV: props.appEnv,
+        BEDROCK_MODEL_ID: props.bedrockModelId,
         INPUT_BUCKET_NAME: props.inputBucket.bucketName,
         OUTPUT_BUCKET_NAME: props.outputBucket.bucketName,
-        BEDROCK_MODEL_ID: props.bedrockModelId,
         PROMPT_FILE_NAME: props.promptFileName,
         SLACK_TOKEN_TABLE_NAME: props.slackTokenTable.tableName,
       },

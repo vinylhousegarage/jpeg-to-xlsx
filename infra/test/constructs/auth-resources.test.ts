@@ -20,9 +20,7 @@ describe('createAuthResources', () => {
   let resources: AuthResources;
 
   beforeAll(() => {
-    const stack = createTestStack(
-      'AuthResourcesTestStack',
-    );
+    const stack = createTestStack('AuthResourcesTestStack');
 
     resources = createAuthResources(
       stack,
@@ -38,10 +36,7 @@ describe('createAuthResources', () => {
   });
 
   test('creates Cognito user pool', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPool',
-      1,
-    );
+    template.resourceCountIs('AWS::Cognito::UserPool', 1);
 
     template.hasResourceProperties(
       'AWS::Cognito::UserPool',
@@ -54,10 +49,7 @@ describe('createAuthResources', () => {
   });
 
   test('creates Cognito user pool domain', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPoolDomain',
-      1,
-    );
+    template.resourceCountIs('AWS::Cognito::UserPoolDomain', 1);
 
     template.hasResourceProperties(
       'AWS::Cognito::UserPoolDomain',
@@ -79,10 +71,7 @@ describe('createAuthResources', () => {
   });
 
   test('creates Google identity provider', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPoolIdentityProvider',
-      1,
-    );
+    template.resourceCountIs('AWS::Cognito::UserPoolIdentityProvider', 1);
 
     template.hasResourceProperties(
       'AWS::Cognito::UserPoolIdentityProvider',
@@ -107,10 +96,7 @@ describe('createAuthResources', () => {
   });
 
   test('creates Cognito user pool client for BFF', () => {
-    template.resourceCountIs(
-      'AWS::Cognito::UserPoolClient',
-      1,
-    );
+    template.resourceCountIs('AWS::Cognito::UserPoolClient', 1);
 
     template.hasResourceProperties(
       'AWS::Cognito::UserPoolClient',
@@ -145,10 +131,7 @@ describe('createAuthResources', () => {
   });
 
   test('creates two authentication secrets', () => {
-    template.resourceCountIs(
-      'AWS::SecretsManager::Secret',
-      2,
-    );
+    template.resourceCountIs('AWS::SecretsManager::Secret', 2);
   });
 
   test('creates Cognito OAuth state table', () => {
@@ -204,39 +187,30 @@ describe('createAuthResources', () => {
   });
 
   test('creates two authentication tables', () => {
-    template.resourceCountIs(
-      'AWS::DynamoDB::Table',
-      2,
-    );
+    template.resourceCountIs('AWS::DynamoDB::Table', 2);
   });
 
   test('returns Cognito redirect URI', () => {
-    expect(resources.redirectUri).toBe(
-      `${testApplicationUrl}/api/auth/callback`,
-    );
+    expect(resources.redirectUri).toBe(`${testApplicationUrl}/api/auth/callback`);
   });
 
   test('returns Cognito authorization endpoint', () => {
-    expect(
-      resources.authorizationEndpoint,
-    ).toContain('/oauth2/authorize');
+    expect(resources.authorizationEndpoint).toContain('/oauth2/authorize');
   });
 
   test('returns Cognito token endpoint', () => {
-    expect(
-      resources.tokenEndpoint,
-    ).toContain('/oauth2/token');
+    expect(resources.tokenEndpoint).toContain('/oauth2/token');
+  });
+
+  test('returns Cognito logout endpoint', () => {
+    expect(resources.logoutEndpoint).toContain('/logout');
   });
 
   test('returns Google OAuth redirect URI', () => {
-    expect(
-      resources.googleRedirectUri,
-    ).toContain('/oauth2/idpresponse');
+    expect(resources.googleRedirectUri).toContain('/oauth2/idpresponse');
   });
 
   test('returns Cognito issuer', () => {
-    expect(resources.issuer).toMatch(
-      /^https:\/\/cognito-idp\.ap-northeast-1\..+\/.+$/,
-    );
+    expect(resources.issuer).toMatch(/^https:\/\/cognito-idp\.ap-northeast-1\..+\/.+$/);
   });
 });
