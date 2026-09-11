@@ -73,6 +73,7 @@ func TestClientAuthorizationURL(
 	assertAuthorizationQueryValue(t, query, "state", state.Value)
 	assertAuthorizationQueryValue(t, query, "nonce", state.Nonce)
 	assertAuthorizationQueryValue(t, query, "identity_provider", "Google")
+	assertAuthorizationQueryValue(t, query, "prompt", "select_account")
 	assertAuthorizationQueryValue(t, query, "code_challenge", codeChallenge(state.CodeVerifier))
 	assertAuthorizationQueryValue(t, query, "code_challenge_method", "S256")
 
