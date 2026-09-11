@@ -10,9 +10,9 @@ import {
   vi,
 } from 'vitest';
 
-import { SuccessDisplay } from './SuccessDisplay';
+import { CanceledDisplay } from './CanceledDisplay';
 
-vi.mock('../../ResultActions', () => ({
+vi.mock('../ResultActions', () => ({
   ResultActions: ({
     onContinueFileSelected,
     onLogout,
@@ -50,10 +50,10 @@ vi.mock('../../ResultActions', () => ({
   ),
 }));
 
-describe('SuccessDisplay', () => {
-  it('renders the success heading and result actions', () => {
+describe('CanceledDisplay', () => {
+  it('displays the canceled message and result actions', () => {
     render(
-      <SuccessDisplay
+      <CanceledDisplay
         onContinueFileSelected={vi.fn()}
         onLogout={vi.fn()}
       />,
@@ -61,28 +61,11 @@ describe('SuccessDisplay', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: '送信完了',
+        name: '処理を中止しました',
       }),
     ).toBeInTheDocument();
 
     expect(screen.getByTestId('result-actions')).toBeInTheDocument();
-  });
-
-  it('centers the display', () => {
-    const { container } = render(
-      <SuccessDisplay
-        onContinueFileSelected={vi.fn()}
-        onLogout={vi.fn()}
-      />,
-    );
-
-    const display = container.querySelector('.success-display');
-
-    expect(display).toHaveStyle({
-      maxWidth: '375px',
-      margin: '0 auto',
-      textAlign: 'center',
-    });
   });
 
   it('passes a selected file to onContinueFileSelected', () => {
@@ -90,7 +73,7 @@ describe('SuccessDisplay', () => {
     const onLogout = vi.fn();
 
     render(
-      <SuccessDisplay
+      <CanceledDisplay
         onContinueFileSelected={
           onContinueFileSelected
         }
@@ -110,11 +93,11 @@ describe('SuccessDisplay', () => {
   });
 
   it('calls onLogout when the logout button is clicked', () => {
-    const onContinueFileSelected = vi.fn().mockResolvedValue(undefined);
+    const onContinueFileSelected = vi.fn();
     const onLogout = vi.fn();
 
     render(
-      <SuccessDisplay
+      <CanceledDisplay
         onContinueFileSelected={
           onContinueFileSelected
         }
