@@ -1,15 +1,18 @@
 import { useEffect } from 'react';
+import { useAuthContext } from '../auth/AuthContext';
+import { Spinner } from '../common/Spinner';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { usePresignUpload } from '../hooks/usePresignUpload';
 import { useAppState } from '../state/useContext';
 import { createShotNumber } from '../utils';
-import { Spinner } from '../common/Spinner';
+import { CanceledDisplay } from './CanceledDisplay';
 import { InputPhase } from './InputPhase';
 import { PreviewPhase } from './PreviewPhase';
 import { ResultPhase } from './ResultPhase';
 
 export const Main = () => {
   const { state, dispatch } = useAppState();
+  const { signOut } = useAuthContext();
   const { send } = usePresignUpload(dispatch);
 
   const handleCapture = (blob: Blob) => {
@@ -36,10 +39,7 @@ export const Main = () => {
   useEffect(() => {
     const url = new URL(window.location.href);
 
-    if (
-      url.searchParams.get('slack') !==
-      'connected'
-    ) {
+    if (url.searchParams.get('slack') !== 'connected') {
       return;
     }
 
@@ -58,9 +58,17 @@ export const Main = () => {
   }, [dispatch]);
 
   const handleConnectSlack = () => {
-    window.location.assign(
-      '/api/oauth/slack/login',
-    );
+    window.location.assign('/api/oauth/slack/login');
+  };
+
+  const handleCancel = () => {
+    dispatch({
+      type: 'CANCEL',
+    });
+  };
+
+  const handleLogout = () => {
+    void signOut();
   };
 
   switch (state.phase.type) {
@@ -84,14 +92,20 @@ export const Main = () => {
           isCompressing={isCompressing}
           onRetakeFileSelected={processImage}
           onSend={() =>
-            send(
-              file,
-              shotNumber,
-            )
+            send(file, shotNumber)
           }
+          onCancel={handleCancel}
         />
       );
     }
+
+    case 'canceled':
+      return (
+        <CanceledDisplay
+          onContinueFileSelected={processImage}
+          onLogout={handleLogout}
+        />
+      );
 
     case 'upload':
       return <Spinner />;
@@ -105,8 +119,7 @@ export const Main = () => {
       );
 
     default: {
-      const _exhaustiveCheck: never =
-        state.phase;
+      const _exhaustiveCheck: never = state.phase;
 
       return _exhaustiveCheck;
     }

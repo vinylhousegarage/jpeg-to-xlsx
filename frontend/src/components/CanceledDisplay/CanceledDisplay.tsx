@@ -1,4 +1,4 @@
-import { ResultActions } from '../../ResultActions';
+import { ResultActions } from '../ResultActions';
 
 type Props = {
   onContinueFileSelected: (
@@ -7,20 +7,20 @@ type Props = {
   onLogout: () => void;
 };
 
-export const SuccessDisplay = ({
+export const CanceledDisplay = ({
   onContinueFileSelected,
   onLogout,
 }: Props) => {
   return (
     <div
-      className="success-display"
+      className="canceled-display"
       style={{
         maxWidth: '375px',
         margin: '0 auto',
         textAlign: 'center',
       }}
     >
-      <h2>送信完了</h2>
+      <h2>処理を中止しました</h2>
 
       <ResultActions
         onContinueFileSelected={

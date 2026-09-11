@@ -6,6 +6,7 @@ type Props = {
     file: File,
   ) => Promise<void>;
   onSubmit: () => void;
+  onCancel: () => void;
   isSending?: boolean;
   isCompressing?: boolean;
 };
@@ -13,11 +14,11 @@ type Props = {
 export const PreviewActions = ({
   onRetakeFileSelected,
   onSubmit,
+  onCancel,
   isSending = false,
   isCompressing = false,
 }: Props) => {
-  const disabled =
-    isSending || isCompressing;
+  const disabled = isSending || isCompressing;
 
   return (
     <div
@@ -43,6 +44,15 @@ export const PreviewActions = ({
         style={standardButtonStyle}
       >
         送信
+      </button>
+
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={disabled}
+        style={standardButtonStyle}
+      >
+        中止
       </button>
     </div>
   );

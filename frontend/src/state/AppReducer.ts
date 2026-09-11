@@ -1,4 +1,7 @@
-import { AppState, AppAction } from '../types';
+import {
+  AppAction,
+  AppState,
+} from '../types';
 
 export const appReducer = (
   state: AppState,
@@ -18,6 +21,18 @@ export const appReducer = (
           type: 'preview',
           file: action.file,
           shotNumber: action.shotNumber,
+        },
+      };
+
+    case 'CANCEL':
+      if (state.phase.type !== 'preview') {
+        return state;
+      }
+
+      return {
+        ...state,
+        phase: {
+          type: 'canceled',
         },
       };
 

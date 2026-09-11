@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest';
+
+import type {
+  AppAction,
+  AppState,
+} from '../types';
 import { appReducer } from './AppReducer';
-import { AppState, AppAction } from '../types';
 
 describe('appReducer', () => {
   const initialState: AppState = {
@@ -31,8 +39,8 @@ describe('appReducer', () => {
       phase: {
         type: 'input',
       },
-    });
-  });
+    })},
+  );
 
   it('should handle SET_PREVIEW', () => {
     const file = new File([''], 'test.png');
@@ -52,56 +60,97 @@ describe('appReducer', () => {
         file,
         shotNumber: 'SHOT-001',
       },
-    });
-  });
+    })},
+  );
 
   it('should preserve Slack linked state when handling SET_PREVIEW', () => {
-    const linkedState: AppState = {
-      isSlackLinked: true,
-      phase: {
-        type: 'input',
-      },
-    };
+      const linkedState: AppState = {
+        isSlackLinked: true,
+        phase: {
+          type: 'input',
+        },
+      };
 
-    const file = new File([''], 'test.png');
+      const file = new File([''], 'test.png');
 
-    const action: AppAction = {
-      type: 'SET_PREVIEW',
-      file,
-      shotNumber: 'SHOT-001',
-    };
+      const action: AppAction = {
+        type: 'SET_PREVIEW',
+        file,
+        shotNumber: 'SHOT-001',
+      };
 
-    const state = appReducer(linkedState, action);
+      const state = appReducer(linkedState, action);
 
-    expect(state.isSlackLinked).toBe(true);
-    expect(state.phase.type).toBe('preview');
-  });
+      expect(state.isSlackLinked).toBe(true);
+      expect(state.phase.type).toBe('preview');
+    },
+  );
+
+  it('should handle CANCEL from the preview phase', () => {
+      const previewState: AppState = {
+        isSlackLinked: true,
+        phase: {
+          type: 'preview',
+          file: new File(
+            [''],
+            'test.png',
+          ),
+          shotNumber: 'SHOT-001',
+        },
+      };
+
+      const action: AppAction = {
+        type: 'CANCEL',
+      };
+
+      const state = appReducer(previewState, action);
+
+      expect(state).toEqual({
+        isSlackLinked: true,
+        phase: {
+          type: 'canceled',
+        },
+      });
+    },
+  );
+
+  it('should ignore CANCEL outside the preview phase', () => {
+      const action: AppAction = {
+        type: 'CANCEL',
+      };
+
+      const state = appReducer(initialState, action);
+
+      expect(state).toBe(initialState);
+    },
+  );
 
   it('should handle UPLOAD_COMPLETE', () => {
-    const uploadState: AppState = {
-      isSlackLinked: true,
-      phase: {
-        type: 'upload',
-        shotNumber: 'SHOT-001',
-      },
-    };
+      const uploadState: AppState = {
+        isSlackLinked: true,
+        phase: {
+          type: 'upload',
+          shotNumber: 'SHOT-001',
+        },
+      };
 
-    const action: AppAction = {
-      type: 'UPLOAD_COMPLETE',
-      status: 'success',
-      error: undefined,
-    };
-
-    const state = appReducer(uploadState, action);
-
-    expect(state).toEqual({
-      isSlackLinked: true,
-      phase: {
-        type: 'result',
-        shotNumber: 'SHOT-001',
+      const action: AppAction = {
+        type: 'UPLOAD_COMPLETE',
         status: 'success',
         error: undefined,
-      },
-    });
-  });
+      };
+
+      const state = appReducer(uploadState, action);
+
+      expect(state).toEqual({
+        isSlackLinked: true,
+        phase: {
+          type: 'result',
+          shotNumber: 'SHOT-001',
+          status: 'success',
+          error: undefined,
+        },
+      });
+    },
+  );
 });

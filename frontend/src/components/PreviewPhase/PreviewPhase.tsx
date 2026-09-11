@@ -7,6 +7,7 @@ type Props = {
     file: File,
   ) => Promise<void>;
   onSend: () => void;
+  onCancel: () => void;
   isSending?: boolean;
   isCompressing?: boolean;
 };
@@ -15,6 +16,7 @@ export const PreviewPhase = ({
   blob,
   onRetakeFileSelected,
   onSend,
+  onCancel,
   isSending = false,
   isCompressing = false,
 }: Props) => {
@@ -39,6 +41,7 @@ export const PreviewPhase = ({
           onRetakeFileSelected
         }
         onSubmit={onSend}
+        onCancel={onCancel}
         isSending={isSending}
         isCompressing={isCompressing}
       />

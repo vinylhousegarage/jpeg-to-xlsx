@@ -8,6 +8,10 @@ export type PreviewPhase = {
   file: Blob;
 };
 
+export type CanceledPhase = {
+  type: 'canceled';
+};
+
 export type UploadPhase = {
   type: 'upload';
   shotNumber: string;
@@ -23,6 +27,7 @@ export type ResultPhase = {
 export type AppPhase =
   | InputPhase
   | PreviewPhase
+  | CanceledPhase
   | UploadPhase
   | ResultPhase;
 
@@ -32,19 +37,9 @@ export type AppState = {
 };
 
 export type AppAction =
-  | {
-      type: 'SET_SLACK_LINKED';
-      isSlackLinked: boolean;
-    }
-  | {
-      type: 'SET_PREVIEW';
-      file: Blob;
-      shotNumber: string;
-    }
-  | { type: 'SEND' }
-  | { type: 'START_UPLOAD' }
-  | {
-      type: 'UPLOAD_COMPLETE';
-      status: 'success' | 'error';
-      error?: Error;
-    }
+  | { type: 'SET_SLACK_LINKED'; isSlackLinked: boolean; }
+  | { type: 'SET_PREVIEW'; file: Blob; shotNumber: string; }
+  | { type: 'CANCEL'; }
+  | { type: 'SEND'; }
+  | { type: 'START_UPLOAD'; }
+  | { type: 'UPLOAD_COMPLETE'; status: 'success' | 'error'; error?: Error; };
