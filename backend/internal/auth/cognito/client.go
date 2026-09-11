@@ -123,6 +123,7 @@ func (c *Client) AuthorizationURL(state oauthstate.State) (string, error) {
 		oauth2.S256ChallengeOption(state.CodeVerifier),
 		oauth2.SetAuthURLParam("nonce", state.Nonce),
 		oauth2.SetAuthURLParam("identity_provider", "Google"),
+		oauth2.SetAuthURLParam("prompt", "select_account"),
 	), nil
 }
 
