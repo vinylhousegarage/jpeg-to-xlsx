@@ -12,6 +12,10 @@ type SessionResponse = {
   authenticated: boolean;
 };
 
+type LogoutResponse = {
+  logout_url: string;
+};
+
 export type AuthClient = {
   checkSession: () => Promise<boolean>;
   startSignIn: () => Promise<void>;
@@ -26,6 +30,18 @@ function isSessionResponse(
     value !== null &&
     'authenticated' in value &&
     typeof value.authenticated === 'boolean'
+  );
+}
+
+function isLogoutResponse(
+  value: unknown,
+): value is LogoutResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'logout_url' in value &&
+    typeof value.logout_url === 'string' &&
+    value.logout_url.trim() !== ''
   );
 }
 
@@ -52,9 +68,7 @@ export function createAuthClient({
       }
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to check session: ${response.status}`,
-        );
+        throw new Error(`Failed to check session: ${response.status}`);
       }
 
       let body: unknown;
@@ -62,9 +76,7 @@ export function createAuthClient({
       try {
         body = await response.json();
       } catch {
-        throw new Error(
-          'Invalid session response',
-        );
+        throw new Error('Invalid session response');
       }
 
       if (!isSessionResponse(body)) {
@@ -94,7 +106,23 @@ export function createAuthClient({
       throw new Error(`Failed to sign out: ${response.status}`);
     }
 
-    redirect('/');
+    let body: unknown;
+
+    try {
+      body = await response.json();
+    } catch {
+      throw new Error(
+        'Invalid logout response',
+      );
+    }
+
+    if (!isLogoutResponse(body)) {
+      throw new Error(
+        'Invalid logout response',
+      );
+    }
+
+    redirect(body.logout_url);
   };
 
   return {
