@@ -111,7 +111,7 @@ export const createDeliveryResources = (
 
   const distribution = new cloudfront.Distribution(
     scope,
-    'WebsiteDistribution',
+    'WebsiteDistributionV2',
     {
       defaultBehavior: {
         origin:
