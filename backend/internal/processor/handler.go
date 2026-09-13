@@ -2,10 +2,13 @@ package processor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
 	"github.com/aws/aws-lambda-go/events"
+
+	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage"
 )
 
 type Workflow interface {
@@ -13,6 +16,7 @@ type Workflow interface {
 		ctx context.Context,
 		inputBucket string,
 		inputKey string,
+		cognitoSub string,
 	) error
 }
 
@@ -31,30 +35,40 @@ func (h *Handler) HandleRequest(
 	event events.S3Event,
 ) error {
 	if len(event.Records) == 0 {
-		return fmt.Errorf("s3 event contains no records")
+		return errors.New("s3 event contains no records")
 	}
 
 	for _, record := range event.Records {
 		bucket := record.S3.Bucket.Name
-		key := record.S3.Object.Key
+		encodedKey := record.S3.Object.Key
 
 		if bucket == "" {
-			return fmt.Errorf("s3 event bucket name is empty")
+			return errors.New("s3 event bucket name is empty")
 		}
 
-		if key == "" {
-			return fmt.Errorf("s3 event object key is empty")
+		if encodedKey == "" {
+			return errors.New("s3 event object key is empty")
 		}
 
-		decodedKey, err := url.QueryUnescape(key)
+		decodedKey, err := url.QueryUnescape(encodedKey)
 		if err != nil {
 			return fmt.Errorf("failed to decode s3 object key: %w", err)
+		}
+
+		cognitoSub, err := storage.ExtractCognitoSub(decodedKey)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to extract Cognito sub from S3 object key %q: %w",
+				decodedKey,
+				err,
+			)
 		}
 
 		if err := h.workflow.Execute(
 			ctx,
 			bucket,
 			decodedKey,
+			cognitoSub,
 		); err != nil {
 			return fmt.Errorf(
 				"failed to execute workflow for %s/%s: %w",

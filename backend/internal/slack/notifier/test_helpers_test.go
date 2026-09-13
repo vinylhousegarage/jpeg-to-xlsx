@@ -8,25 +8,26 @@ import (
 )
 
 type stubTokenStore struct {
-	token *oauth.Token
-	err   error
-
-	called bool
-	ctx    context.Context
+	token      *oauth.Token
+	err        error
+	called     bool
+	ctx        context.Context
+	cognitoSub string
 }
 
 func (s *stubTokenStore) Get(
 	ctx context.Context,
+	cognitoSub string,
 ) (*oauth.Token, error) {
 	s.called = true
 	s.ctx = ctx
+	s.cognitoSub = cognitoSub
 
 	return s.token, s.err
 }
 
 type stubMessageClient struct {
-	err error
-
+	err         error
 	called      bool
 	ctx         context.Context
 	accessToken string

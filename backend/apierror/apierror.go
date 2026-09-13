@@ -9,6 +9,7 @@ const (
 	ErrorCodeInternal      ErrorCode = "internal_server_error"
 	ErrorCodeInvalidJSON   ErrorCode = "invalid_json"
 	ErrorCodeInvalidMethod ErrorCode = "invalid_method"
+	ErrorCodeUnauthorized  ErrorCode = "unauthorized"
 
 	// Upload
 	ErrorCodeMissingShotNumber ErrorCode = "missing_shot_number"

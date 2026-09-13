@@ -16,10 +16,11 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 	t.Parallel()
 
 	const (
+		cognitoSub          = "test-cognito-sub"
 		inputBucket         = "input-bucket"
 		outputBucket        = "output-bucket"
-		inputKey            = "SHOT-001.jpg"
-		expectedOutputKey   = "SHOT-001.xlsx"
+		inputKey            = "test-cognito-sub/SHOT-001.jpg"
+		expectedOutputKey   = "test-cognito-sub/SHOT-001.xlsx"
 		expectedShotNumber  = "SHOT-001"
 		expectedDownloadURL = "https://example.com/download"
 		expectedContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -33,9 +34,7 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 	workflow := NewWorkflow(
 		&mockS3Getter{
 			getOutput: &s3.GetObjectOutput{
-				Body: io.NopCloser(
-					bytes.NewReader([]byte("fake-image-bytes")),
-				),
+				Body: io.NopCloser(bytes.NewReader([]byte("fake-image-bytes"))),
 			},
 		},
 		s3Putter,
@@ -52,7 +51,7 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 		zap.NewNop(),
 	)
 
-	err := workflow.Execute(ctx, inputBucket, inputKey)
+	err := workflow.Execute(ctx, inputBucket, inputKey, cognitoSub)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -70,11 +69,7 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 	}
 
 	if got := aws.ToString(s3Putter.putInput.ContentType); got != expectedContentType {
-		t.Errorf(
-			"PutObject() ContentType = %q, want %q",
-			got,
-			expectedContentType,
-		)
+		t.Errorf("PutObject() ContentType = %q, want %q", got, expectedContentType)
 	}
 
 	xlsxData, err := io.ReadAll(s3Putter.putInput.Body)
@@ -106,6 +101,10 @@ func TestWorkflow_Execute_Success(t *testing.T) {
 
 	if slackNotifier.ctx != ctx {
 		t.Error("Notify() received an unexpected context")
+	}
+
+	if slackNotifier.cognitoSub != cognitoSub {
+		t.Errorf("Notify() cognitoSub = %q, want %q", slackNotifier.cognitoSub, cognitoSub)
 	}
 
 	if slackNotifier.message.ShotNumber != expectedShotNumber {

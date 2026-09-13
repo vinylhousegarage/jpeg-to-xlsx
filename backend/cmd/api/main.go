@@ -24,10 +24,7 @@ func main() {
 
 	cfg, err := config.LoadAPI()
 	if err != nil {
-		log.Fatalf(
-			"failed to load config: %v",
-			err,
-		)
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	awsConfig, err := awsconfig.LoadDefaultConfig(
@@ -35,38 +32,18 @@ func main() {
 		awsconfig.WithRegion(cfg.AWS.Region),
 	)
 	if err != nil {
-		log.Fatalf(
-			"failed to load AWS config: %v",
-			err,
-		)
+		log.Fatalf("failed to load AWS config: %v", err)
 	}
 
-	appLogger, err := logger.NewLogger(
-		cfg.App.Env,
-	)
+	appLogger, err := logger.NewLogger(cfg.App.Env)
 	if err != nil {
-		log.Fatalf(
-			"failed to initialize logger: %v",
-			err,
-		)
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
 
 	baseS3Client := s3.NewFromConfig(awsConfig)
 	dynamoDBClient := dynamodb.NewFromConfig(awsConfig)
 	secretsManagerClient := awssecretsmanager.NewFromConfig(awsConfig)
 	secretLoader := platformsecretsmanager.NewLoader(secretsManagerClient)
-
-	storageHandler, err := buildStorageHandler(
-		cfg.Storage,
-		baseS3Client,
-		appLogger,
-	)
-	if err != nil {
-		appLogger.Fatal(
-			"Failed to build storage handler",
-			zap.Error(err),
-		)
-	}
 
 	authHandlerSet, err := buildAuthHandlers(
 		ctx,
@@ -75,10 +52,17 @@ func main() {
 		secretLoader,
 	)
 	if err != nil {
-		appLogger.Fatal(
-			"Failed to build authentication handlers",
-			zap.Error(err),
-		)
+		appLogger.Fatal("Failed to build authentication handlers", zap.Error(err))
+	}
+
+	storageHandler, err := buildStorageHandler(
+		cfg.Storage,
+		baseS3Client,
+		authHandlerSet.sessionResolver,
+		appLogger,
+	)
+	if err != nil {
+		appLogger.Fatal("Failed to build storage handler", zap.Error(err))
 	}
 
 	slackHandlerSet, err := buildSlackHandlers(
@@ -87,13 +71,11 @@ func main() {
 		cfg.App.CookieSecure,
 		dynamoDBClient,
 		secretLoader,
+		authHandlerSet.sessionResolver,
 		appLogger,
 	)
 	if err != nil {
-		appLogger.Fatal(
-			"Failed to build Slack handlers",
-			zap.Error(err),
-		)
+		appLogger.Fatal("Failed to build Slack handlers", zap.Error(err))
 	}
 
 	mux := http.NewServeMux()
@@ -109,10 +91,10 @@ func main() {
 		storageHandler,
 	)
 
-	appLogger.Info("Application successfully initialized")
+	appLogger.Info("Application initialized successfully")
 
 	if cfg.AWS.IsLambda {
-		appLogger.Info("Starting server on AWS Lambda")
+		appLogger.Info("Starting processor on AWS Lambda")
 		adapter := httpadapter.NewV2(mux)
 		lambda.Start(adapter.ProxyWithContext)
 
@@ -127,9 +109,6 @@ func main() {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		appLogger.Fatal(
-			"Server failed",
-			zap.Error(err),
-		)
+		appLogger.Fatal("Server failed", zap.Error(err))
 	}
 }

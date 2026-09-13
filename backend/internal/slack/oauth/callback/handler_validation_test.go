@@ -8,11 +8,13 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/apierror"
+	authsession "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session"
 )
 
 func TestHandler_ServeHTTP_RejectsUnsupportedMethod(t *testing.T) {
 	t.Parallel()
 
+	resolver := &stubSessionResolver{}
 	exchanger := &stubCodeExchanger{}
 	opener := &stubConversationOpener{}
 	store := &stubTokenStore{}
@@ -20,6 +22,7 @@ func TestHandler_ServeHTTP_RejectsUnsupportedMethod(t *testing.T) {
 	handler := NewHandler(
 		testRedirectURI,
 		true,
+		resolver,
 		exchanger,
 		opener,
 		store,
@@ -42,6 +45,10 @@ func TestHandler_ServeHTTP_RejectsUnsupportedMethod(t *testing.T) {
 		apierror.ErrorCodeInvalidMethod,
 	)
 
+	if resolver.called {
+		t.Error("Resolve() was called")
+	}
+
 	if exchanger.called {
 		t.Error("ExchangeCode() was called")
 	}
@@ -62,6 +69,11 @@ func TestHandler_ServeHTTP_RejectsUnsupportedMethod(t *testing.T) {
 func TestHandler_ServeHTTP_MissingStateCookie(t *testing.T) {
 	t.Parallel()
 
+	resolver := &stubSessionResolver{
+		session: authsession.Session{
+			CognitoSub: testCognitoSub,
+		},
+	}
 	exchanger := &stubCodeExchanger{}
 	opener := &stubConversationOpener{}
 	store := &stubTokenStore{}
@@ -69,6 +81,7 @@ func TestHandler_ServeHTTP_MissingStateCookie(t *testing.T) {
 	handler := NewHandler(
 		testRedirectURI,
 		true,
+		resolver,
 		exchanger,
 		opener,
 		store,
@@ -92,6 +105,10 @@ func TestHandler_ServeHTTP_MissingStateCookie(t *testing.T) {
 		http.StatusBadRequest,
 		apierror.ErrorCodeMissingState,
 	)
+
+	if !resolver.called {
+		t.Fatal("Resolve() was not called")
+	}
 
 	if exchanger.called {
 		t.Error("ExchangeCode() was called")
@@ -134,6 +151,11 @@ func TestHandler_ServeHTTP_InvalidState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			resolver := &stubSessionResolver{
+				session: authsession.Session{
+					CognitoSub: testCognitoSub,
+				},
+			}
 			exchanger := &stubCodeExchanger{}
 			opener := &stubConversationOpener{}
 			store := &stubTokenStore{}
@@ -141,6 +163,7 @@ func TestHandler_ServeHTTP_InvalidState(t *testing.T) {
 			handler := NewHandler(
 				testRedirectURI,
 				true,
+				resolver,
 				exchanger,
 				opener,
 				store,
@@ -173,6 +196,10 @@ func TestHandler_ServeHTTP_InvalidState(t *testing.T) {
 				apierror.ErrorCodeInvalidState,
 			)
 
+			if !resolver.called {
+				t.Fatal("Resolve() was not called")
+			}
+
 			if exchanger.called {
 				t.Error("ExchangeCode() was called")
 			}
@@ -186,9 +213,7 @@ func TestHandler_ServeHTTP_InvalidState(t *testing.T) {
 			}
 
 			if len(rec.Result().Cookies()) != 0 {
-				t.Error(
-					"state cookie was deleted before successful validation",
-				)
+				t.Error("state cookie was deleted before successful validation")
 			}
 		})
 	}
@@ -197,6 +222,11 @@ func TestHandler_ServeHTTP_InvalidState(t *testing.T) {
 func TestHandler_ServeHTTP_MissingCode(t *testing.T) {
 	t.Parallel()
 
+	resolver := &stubSessionResolver{
+		session: authsession.Session{
+			CognitoSub: testCognitoSub,
+		},
+	}
 	exchanger := &stubCodeExchanger{}
 	opener := &stubConversationOpener{}
 	store := &stubTokenStore{}
@@ -204,6 +234,7 @@ func TestHandler_ServeHTTP_MissingCode(t *testing.T) {
 	handler := NewHandler(
 		testRedirectURI,
 		false,
+		resolver,
 		exchanger,
 		opener,
 		store,
@@ -235,6 +266,10 @@ func TestHandler_ServeHTTP_MissingCode(t *testing.T) {
 		apierror.ErrorCodeMissingCode,
 	)
 
+	if !resolver.called {
+		t.Fatal("Resolve() was not called")
+	}
+
 	if exchanger.called {
 		t.Error("ExchangeCode() was called")
 	}
@@ -247,9 +282,5 @@ func TestHandler_ServeHTTP_MissingCode(t *testing.T) {
 		t.Error("Save() was called")
 	}
 
-	assertDeleteStateCookie(
-		t,
-		rec,
-		false,
-	)
+	assertDeleteStateCookie(t, rec, false)
 }

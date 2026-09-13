@@ -70,19 +70,21 @@ func (m *mockBedrockService) ProcessImage(
 }
 
 type mockSlackNotifier struct {
-	notifyErr error
-
-	called  bool
-	ctx     context.Context
-	message notifier.Message
+	notifyErr  error
+	called     bool
+	ctx        context.Context
+	cognitoSub string
+	message    notifier.Message
 }
 
 func (m *mockSlackNotifier) Notify(
 	ctx context.Context,
+	cognitoSub string,
 	message notifier.Message,
 ) error {
 	m.called = true
 	m.ctx = ctx
+	m.cognitoSub = cognitoSub
 	m.message = message
 
 	return m.notifyErr

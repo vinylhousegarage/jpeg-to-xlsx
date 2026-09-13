@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
+	authsession "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
 )
 
@@ -18,6 +19,12 @@ func TestHandler_ServeHTTP_Success(t *testing.T) {
 		BotUserID:   "B123",
 		TeamID:      "T123",
 		UserID:      "U123",
+	}
+
+	resolver := &stubSessionResolver{
+		session: authsession.Session{
+			CognitoSub: testCognitoSub,
+		},
 	}
 
 	exchanger := &stubCodeExchanger{
@@ -33,6 +40,7 @@ func TestHandler_ServeHTTP_Success(t *testing.T) {
 	handler := NewHandler(
 		testRedirectURI,
 		true,
+		resolver,
 		exchanger,
 		opener,
 		store,
@@ -63,16 +71,24 @@ func TestHandler_ServeHTTP_Success(t *testing.T) {
 		)
 	}
 
+	if !resolver.called {
+		t.Fatal("Resolve() was not called")
+	}
+
+	if resolver.request != req {
+		t.Error("Resolve() received an unexpected request")
+	}
+
+	if resolver.ctx != req.Context() {
+		t.Error("Resolve() received an unexpected context")
+	}
+
 	if !exchanger.called {
 		t.Fatal("ExchangeCode() was not called")
 	}
 
 	if exchanger.gotCode != testCode {
-		t.Errorf(
-			"ExchangeCode() code = %q, want %q",
-			exchanger.gotCode,
-			testCode,
-		)
+		t.Errorf("ExchangeCode() code = %q, want %q", exchanger.gotCode, testCode)
 	}
 
 	if exchanger.gotRedirect != testRedirectURI {
@@ -107,12 +123,16 @@ func TestHandler_ServeHTTP_Success(t *testing.T) {
 		t.Fatal("Save() was not called")
 	}
 
-	if store.gotToken != token {
+	if store.gotCognitoSub != testCognitoSub {
 		t.Errorf(
-			"Save() token = %+v, want %+v",
-			store.gotToken,
-			token,
+			"Save() cognitoSub = %q, want %q",
+			store.gotCognitoSub,
+			testCognitoSub,
 		)
+	}
+
+	if store.gotToken != token {
+		t.Errorf("Save() token = %+v, want %+v", store.gotToken, token)
 	}
 
 	if store.gotToken.ChannelID != "D123" {
@@ -123,9 +143,5 @@ func TestHandler_ServeHTTP_Success(t *testing.T) {
 		)
 	}
 
-	assertDeleteStateCookie(
-		t,
-		rec,
-		true,
-	)
+	assertDeleteStateCookie(t, rec, true)
 }

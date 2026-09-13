@@ -7,8 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-const defaultTokenID = "default"
-
 type dynamodbAPI interface {
 	GetItem(
 		ctx context.Context,
@@ -30,10 +28,7 @@ type Store struct {
 	now       func() time.Time
 }
 
-func NewStore(
-	client dynamodbAPI,
-	tableName string,
-) *Store {
+func NewStore(client dynamodbAPI, tableName string) *Store {
 	return &Store{
 		client:    client,
 		tableName: tableName,
@@ -42,7 +37,7 @@ func NewStore(
 }
 
 type tokenItem struct {
-	ID          string `dynamodbav:"id"`
+	CognitoSub  string `dynamodbav:"cognito_sub"`
 	TeamID      string `dynamodbav:"team_id"`
 	AccessToken string `dynamodbav:"access_token"`
 	BotUserID   string `dynamodbav:"bot_user_id"`

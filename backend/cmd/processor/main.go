@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"log"
 
-	"go.uber.org/zap"
-
 	"github.com/aws/aws-lambda-go/lambda"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"go.uber.org/zap"
 
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/bedrock"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/bedrock/prompts"
@@ -26,31 +25,33 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
 	cfg, err := config.LoadProcessor()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
 	awsCfg, err := awsconfig.LoadDefaultConfig(
-		context.TODO(),
+		ctx,
 		awsconfig.WithRegion(cfg.AWS.Region),
 	)
 	if err != nil {
 		log.Fatalf("failed to load AWS config: %v", err)
 	}
 
-	l, err := logger.NewLogger(cfg.App.Env)
+	appLogger, err := logger.NewLogger(cfg.App.Env)
 	if err != nil {
 		panic(fmt.Sprintf("failed to initialize logger: %v", err))
 	}
 
 	defer func() {
-		_ = l.Sync()
+		_ = appLogger.Sync()
 	}()
 
 	baseS3Client := s3.NewFromConfig(awsCfg)
 	baseBedrockClient := bedrockruntime.NewFromConfig(awsCfg)
-	baseDynamoClient := dynamodb.NewFromConfig(awsCfg)
+	baseDynamoDBClient := dynamodb.NewFromConfig(awsCfg)
 
 	s3Client := storage.NewS3Client(
 		cfg.Storage.InputBucketName,
@@ -58,7 +59,7 @@ func main() {
 	)
 
 	presignClient := storage.NewS3PresignClient(
-		cfg.Storage.InputBucketName,
+		cfg.Storage.OutputBucketName,
 		baseS3Client,
 	)
 
@@ -66,34 +67,26 @@ func main() {
 		cfg.Bedrock.PromptFileName,
 	)
 	if err != nil {
-		l.Fatal(
-			"failed to load prompt",
-			zap.Error(err),
-		)
+		appLogger.Fatal("failed to load prompt", zap.Error(err))
 	}
 
 	bedrockClient := bedrock.NewClient(
 		baseBedrockClient,
 		cfg.Bedrock.ModelID,
 		promptText,
-		l,
+		appLogger,
 	)
 
-	bedrockService := bedrock.NewService(
-		bedrockClient,
-	)
+	bedrockService := bedrock.NewService(bedrockClient)
 
 	tokenStore := tokenstore.NewStore(
-		baseDynamoClient,
+		baseDynamoDBClient,
 		cfg.SlackToken.TokenTableName,
 	)
 
 	slackClient := slackapi.NewClient(nil)
 
-	slackNotifier := notifier.NewNotifier(
-		tokenStore,
-		slackClient,
-	)
+	slackNotifier := notifier.NewNotifier(tokenStore, slackClient)
 
 	workflow := usecase.NewWorkflow(
 		s3Client,
@@ -102,12 +95,12 @@ func main() {
 		bedrockService,
 		slackNotifier,
 		cfg.Storage.OutputBucketName,
-		l,
+		appLogger,
 	)
 
 	handler := processor.NewHandler(workflow)
 
-	l.Info("Starting processor on AWS Lambda")
+	appLogger.Info("Starting processor on AWS Lambda")
 
 	lambda.Start(handler.HandleRequest)
 }

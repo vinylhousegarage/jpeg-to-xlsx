@@ -20,7 +20,6 @@ import (
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/xlsx"
 )
 
-// インターフェースを定義
 type S3Getter interface {
 	GetObject(
 		ctx context.Context,
@@ -55,11 +54,11 @@ type BedrockService interface {
 type SlackNotifier interface {
 	Notify(
 		ctx context.Context,
+		cognitoSub string,
 		message notifier.Message,
 	) error
 }
 
-// 構造体を定義
 type Workflow struct {
 	s3Getter       S3Getter
 	s3Putter       S3Putter
@@ -70,7 +69,6 @@ type Workflow struct {
 	logger         *zap.Logger
 }
 
-// 構造体を初期化
 func NewWorkflow(
 	s3Getter S3Getter,
 	s3Putter S3Putter,
@@ -91,11 +89,11 @@ func NewWorkflow(
 	}
 }
 
-// Execute ワークフローの実行関数
 func (w *Workflow) Execute(
 	ctx context.Context,
 	inputBucket string,
 	inputKey string,
+	cognitoSub string,
 ) error {
 	w.logger.Info(
 		"starting workflow",
@@ -103,13 +101,8 @@ func (w *Workflow) Execute(
 		zap.String("key", inputKey),
 	)
 
-	// S3オブジェクトキーから撮影番号を取得
-	shotNumber := strings.TrimSuffix(
-		filepath.Base(inputKey),
-		filepath.Ext(inputKey),
-	)
+	shotNumber := strings.TrimSuffix(filepath.Base(inputKey), filepath.Ext(inputKey))
 
-	// アップロードされた画像をS3から取得
 	objOutput, err := w.s3Getter.GetObject(
 		ctx,
 		&s3.GetObjectInput{
@@ -122,44 +115,32 @@ func (w *Workflow) Execute(
 	}
 	defer func() {
 		if err := objOutput.Body.Close(); err != nil {
-			w.logger.Warn(
-				"failed to close s3 object body",
-				zap.Error(err),
-			)
+			w.logger.Warn("failed to close s3 object body", zap.Error(err))
 		}
 	}()
 
-	// io.ReadCloserから画像データを読み込み
 	imgData, err := io.ReadAll(objOutput.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read image body: %w", err)
 	}
 
-	// Bedrockで画像を解析してJSONへ変換
 	jsonMap, err := w.bedrockService.ProcessImage(ctx, imgData)
 	if err != nil {
 		return fmt.Errorf("failed to process image with bedrock: %w", err)
 	}
 
-	// mapをJSONバイト列へ変換
 	jsonBytes, err := json.MarshalIndent(jsonMap, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal json: %w", err)
 	}
 
-	// JSONをxlsxデータへ変換
 	xlsxData, err := xlsx.Convert(jsonBytes)
 	if err != nil {
 		return fmt.Errorf("failed to convert json to xlsx: %w", err)
 	}
 
-	// xlsx保存先のオブジェクトキーを生成
-	outputKey := strings.TrimSuffix(
-		inputKey,
-		filepath.Ext(inputKey),
-	) + ".xlsx"
+	outputKey := strings.TrimSuffix(inputKey, filepath.Ext(inputKey)) + ".xlsx"
 
-	// xlsxをS3へ保存
 	_, err = w.s3Putter.PutObject(
 		ctx,
 		&s3.PutObjectInput{
@@ -175,7 +156,6 @@ func (w *Workflow) Execute(
 		return fmt.Errorf("failed to put xlsx to output s3: %w", err)
 	}
 
-	// xlsxダウンロード用の署名付きURLを生成
 	presignReq, err := w.s3Presigner.PresignGetObject(
 		ctx,
 		&s3.GetObjectInput{
@@ -188,9 +168,9 @@ func (w *Workflow) Execute(
 		return fmt.Errorf("failed to generate presigned url: %w", err)
 	}
 
-	// Slack OAuthで連携済みのSlackへ通知
 	if err := w.slackNotifier.Notify(
 		ctx,
+		cognitoSub,
 		notifier.Message{
 			ShotNumber:  shotNumber,
 			DownloadURL: presignReq.URL,
