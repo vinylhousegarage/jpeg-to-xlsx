@@ -20,16 +20,16 @@
 ```mermaid
 sequenceDiagram
   autonumber
-  actor User as ユーザー
-  participant Browser as スマートフォン<br/>ブラウザ
+  participant User as ユーザー
+  participant Browser as スマートフォン<br/>（ブラウザ）
   participant CloudFront
-  participant S3Web as S3<br/>配信用
-  participant API as API Gateway
-  participant BFF as Lambda<br/>API・BFF
-  participant StateDB as DynamoDB<br/>OAuth State
+  participant S3Web as S3<br/>（配信用）
+  participant API as API Gateway<br/>（HTTP API）
+  participant BFF as Lambda<br/>（API実行）
+  participant StateDB as DynamoDB<br/>（Cognito state保存）
   participant Cognito
-  participant Google
-  participant SessionDB as DynamoDB<br/>Session
+  participant Google as Google OAuth
+  participant SessionDB as DynamoDB<br/>（セッション保存）
 
   User->>Browser: jpeg-to-xlsxへアクセス
   Browser->>CloudFront: Webアプリを要求
@@ -47,7 +47,7 @@ sequenceDiagram
   Cognito->>Google: Google認証へ転送
   User->>Google: アカウント選択・本人確認
   Google-->>Cognito: 認証成功
-  Cognito-->>Browser: code・state付きでBFFへ戻す
+  Cognito-->>Browser: code・state付きでLamda（API実行）へ戻す
 
   Browser->>CloudFront: /api/auth/callback
   CloudFront->>API: /api/*を転送
@@ -66,13 +66,13 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   autonumber
-  actor User as ユーザー
-  participant Browser as スマートフォン<br/>ブラウザ
+  participant User as ユーザー
+  participant Browser as スマートフォン<br/>（ブラウザ）
   participant CloudFront
-  participant API as API Gateway
-  participant BFF as Lambda<br/>API・BFF
-  participant SessionDB as DynamoDB<br/>Session
-  participant S3Input as S3<br/>アップロード用
+  participant API as API Gateway<br/>（HTTP API）
+  participant BFF as Lambda<br/>（API実行）
+  participant SessionDB as DynamoDB<br/>（セッション保存）
+  participant S3Input as S3<br/>（アップロード用）
 
   User->>Browser: 画像を撮影・送信
   Browser->>CloudFront: 署名付きURLを要求<br/>Session Cookie付き
@@ -82,7 +82,7 @@ sequenceDiagram
   BFF->>SessionDB: id_hashでセッションを取得
   SessionDB-->>BFF: cognito_sub・有効期限
   BFF->>BFF: ログイン状態と入力値を確認
-  BFF->>S3Input: PUT用署名付きURLを生成
+  BFF->>S3Input: アップロード用署名付きURLを生成
   S3Input-->>BFF: 署名付きURL
   BFF-->>API: URL・オブジェクトキー
   API-->>CloudFront: APIレスポンス
@@ -94,16 +94,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   autonumber
-  actor User as ユーザー
-  participant Browser as スマートフォン<br/>ブラウザ
-  participant S3Input as S3<br/>アップロード用
-  participant Processor as Lambda<br/>Processor
-  participant Bedrock as Amazon Bedrock<br/>Claude Sonnet 4.6
-  participant S3Output as S3<br/>ダウンロード用
-  participant TokenDB as DynamoDB<br/>Slack Token
+  participant User as ユーザー
+  participant Browser as スマートフォン<br/>（ブラウザ）
+  participant S3Input as S3<br/>（アップロード用）
+  participant Processor as Lambda<br/>（イベント駆動）
+  participant Bedrock as Amazon Bedrock<br/>（Claude Sonnet 4.6）
+  participant S3Output as S3<br/>（ダウンロード用）
+  participant TokenDB as DynamoDB<br/>（Slackトークン）
   participant Slack as Slack API
 
-  Browser->>S3Input: 署名付きURLで画像をPUT
+  Browser->>S3Input: 署名付きURLで画像をアップロード
   S3Input-->>Browser: アップロード成功
 
   S3Input-->>Processor: S3イベントで非同期起動
@@ -116,10 +116,10 @@ sequenceDiagram
 
   Processor->>S3Output: XLSXファイルを保存
   S3Output-->>Processor: 保存完了
-  Processor->>Processor: GET用署名付きURLを生成
+  Processor->>Processor: ダウンロード用署名付きURLを生成
 
-  Processor->>TokenDB: Slackトークン・Channel IDを取得
-  TokenDB-->>Processor: Access Token・Channel ID
+  Processor->>TokenDB: Slackトークンを取得
+  TokenDB-->>Processor: Skackトークン
   Processor->>Slack: XLSXの署名付きURLをDM送信
   Slack-->>User: ダウンロードリンクを通知
 ```
