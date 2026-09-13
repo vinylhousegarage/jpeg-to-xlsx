@@ -11,19 +11,31 @@ func TestNotifier_Notify_ValidationErrors(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		message   Message
-		wantError string
+		name       string
+		cognitoSub string
+		message    Message
+		wantError  string
 	}{
 		{
-			name: "missing shot number",
+			name:       "missing cognito sub",
+			cognitoSub: "",
 			message: Message{
-				DownloadURL: "https://example.com/test.json",
+				ShotNumber:  "001",
+				DownloadURL: "https://example.com/test.xlsx",
+			},
+			wantError: "notify slack: cognito sub is empty",
+		},
+		{
+			name:       "missing shot number",
+			cognitoSub: testNotifierCognitoSub,
+			message: Message{
+				DownloadURL: "https://example.com/test.xlsx",
 			},
 			wantError: "notify slack: shot number is empty",
 		},
 		{
-			name: "missing download URL",
+			name:       "missing download URL",
+			cognitoSub: testNotifierCognitoSub,
 			message: Message{
 				ShotNumber: "001",
 			},
@@ -40,20 +52,13 @@ func TestNotifier_Notify_ValidationErrors(t *testing.T) {
 
 			notifier := NewNotifier(tokenStore, client)
 
-			err := notifier.Notify(
-				context.Background(),
-				tt.message,
-			)
+			err := notifier.Notify(context.Background(), tt.cognitoSub, tt.message)
 			if err == nil {
 				t.Fatal("Notify() error = nil, want an error")
 			}
 
 			if err.Error() != tt.wantError {
-				t.Errorf(
-					"Notify() error = %q, want %q",
-					err.Error(),
-					tt.wantError,
-				)
+				t.Errorf("Notify() error = %q, want %q", err.Error(), tt.wantError)
 			}
 
 			if tokenStore.called {
@@ -113,9 +118,10 @@ func TestNotifier_Notify_InvalidToken(t *testing.T) {
 
 			err := notifier.Notify(
 				context.Background(),
+				testNotifierCognitoSub,
 				Message{
 					ShotNumber:  "001",
-					DownloadURL: "https://example.com/test.json",
+					DownloadURL: "https://example.com/test.xlsx",
 				},
 			)
 			if err == nil {
@@ -123,21 +129,23 @@ func TestNotifier_Notify_InvalidToken(t *testing.T) {
 			}
 
 			if err.Error() != tt.wantError {
-				t.Errorf(
-					"Notify() error = %q, want %q",
-					err.Error(),
-					tt.wantError,
-				)
+				t.Errorf("Notify() error = %q, want %q", err.Error(), tt.wantError)
 			}
 
 			if !tokenStore.called {
 				t.Fatal("Get() was not called")
 			}
 
-			if client.called {
-				t.Error(
-					"PostMessage() was called with an invalid token",
+			if tokenStore.cognitoSub != testNotifierCognitoSub {
+				t.Errorf(
+					"Get() cognitoSub = %q, want %q",
+					tokenStore.cognitoSub,
+					testNotifierCognitoSub,
 				)
+			}
+
+			if client.called {
+				t.Error("PostMessage() was called with an invalid token")
 			}
 		})
 	}

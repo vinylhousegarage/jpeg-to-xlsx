@@ -12,7 +12,6 @@ import (
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/storage"
 )
 
-// インターフェースを定義
 type S3Presigner interface {
 	PresignPutObject(
 		ctx context.Context,
@@ -21,22 +20,20 @@ type S3Presigner interface {
 	) (*v4.PresignedHTTPRequest, error)
 }
 
-// 構造体を定義
 type Service struct{ s3Presigner S3Presigner }
 
-// 構造体を初期化
 func NewService(s3Presigner S3Presigner) *Service {
 	return &Service{s3Presigner: s3Presigner}
 }
 
-// 署名付きURL生成ロジック
 func (s *Service) GeneratePresignURL(
 	ctx context.Context,
+	cognitoSub string,
 	shotNumber string,
 ) (string, time.Time, error) {
 	now := time.Now()
 	duration := 15 * time.Minute
-	objectKey := storage.BuildObjectKey(shotNumber)
+	objectKey := storage.BuildObjectKey(cognitoSub, shotNumber)
 
 	request, err := s.s3Presigner.PresignPutObject(
 		ctx,

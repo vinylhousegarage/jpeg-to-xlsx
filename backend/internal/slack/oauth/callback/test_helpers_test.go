@@ -8,22 +8,45 @@ import (
 	"testing"
 
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/apierror"
+	authsession "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/slack/oauth"
 )
 
 const (
 	testState        = "test-state"
 	testCode         = "test-code"
+	testCognitoSub   = "test-cognito-sub"
 	testCallbackPath = "/api/oauth/slack/callback"
 	testRedirectURI  = "https://example.com/api/oauth/slack/callback"
 
 	expectedStateCookiePath = "/api/oauth/slack"
 )
 
-type stubCodeExchanger struct {
-	token *oauth.Token
-	err   error
+type stubSessionResolver struct {
+	session authsession.Session
+	err     error
+	called  bool
+	ctx     context.Context
+	request *http.Request
+}
 
+func (s *stubSessionResolver) Resolve(
+	ctx context.Context,
+	request *http.Request,
+) (
+	authsession.Session,
+	error,
+) {
+	s.called = true
+	s.ctx = ctx
+	s.request = request
+
+	return s.session, s.err
+}
+
+type stubCodeExchanger struct {
+	token       *oauth.Token
+	err         error
 	called      bool
 	gotCode     string
 	gotRedirect string
@@ -42,9 +65,8 @@ func (s *stubCodeExchanger) ExchangeCode(
 }
 
 type stubConversationOpener struct {
-	channelID string
-	err       error
-
+	channelID      string
+	err            error
 	called         bool
 	gotAccessToken string
 	gotUserID      string
@@ -63,17 +85,19 @@ func (s *stubConversationOpener) OpenConversation(
 }
 
 type stubTokenStore struct {
-	err error
-
-	called   bool
-	gotToken *oauth.Token
+	err           error
+	called        bool
+	gotCognitoSub string
+	gotToken      *oauth.Token
 }
 
 func (s *stubTokenStore) Save(
 	_ context.Context,
+	cognitoSub string,
 	token *oauth.Token,
 ) error {
 	s.called = true
+	s.gotCognitoSub = cognitoSub
 	s.gotToken = token
 
 	return s.err
@@ -116,27 +140,16 @@ func assertErrorResponse(
 	}
 
 	if got := rec.Header().Get("Content-Type"); got != "application/json" {
-		t.Errorf(
-			"Content-Type = %q, want %q",
-			got,
-			"application/json",
-		)
+		t.Errorf("Content-Type = %q, want %q", got, "application/json")
 	}
 
 	var response apierror.ErrorResponse
 	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
-		t.Fatalf(
-			"failed to decode error response: %v",
-			err,
-		)
+		t.Fatalf("failed to decode error response: %v", err)
 	}
 
 	if response.Error != string(wantCode) {
-		t.Errorf(
-			"error code = %q, want %q",
-			response.Error,
-			wantCode,
-		)
+		t.Errorf("error code = %q, want %q", response.Error, wantCode)
 	}
 }
 
@@ -149,10 +162,7 @@ func assertDeleteStateCookie(
 
 	cookies := rec.Result().Cookies()
 	if len(cookies) != 1 {
-		t.Fatalf(
-			"response cookie count = %d, want 1",
-			len(cookies),
-		)
+		t.Fatalf("response cookie count = %d, want 1", len(cookies))
 	}
 
 	cookie := cookies[0]
@@ -166,10 +176,7 @@ func assertDeleteStateCookie(
 	}
 
 	if cookie.Value != "" {
-		t.Errorf(
-			"cookie value = %q, want empty",
-			cookie.Value,
-		)
+		t.Errorf("cookie value = %q, want empty", cookie.Value)
 	}
 
 	if cookie.Path != expectedStateCookiePath {
@@ -193,10 +200,7 @@ func assertDeleteStateCookie(
 	}
 
 	if cookie.MaxAge != -1 {
-		t.Errorf(
-			"cookie MaxAge = %d, want -1",
-			cookie.MaxAge,
-		)
+		t.Errorf("cookie MaxAge = %d, want -1", cookie.MaxAge)
 	}
 
 	if cookie.Secure != wantSecure {

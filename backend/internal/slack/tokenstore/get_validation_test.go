@@ -19,7 +19,7 @@ func TestStore_Get_InvalidStoredToken(t *testing.T) {
 		{
 			name: "missing stored team ID",
 			item: tokenItem{
-				ID:          defaultTokenID,
+				CognitoSub:  testCognitoSub,
 				AccessToken: "xoxb-test",
 				BotUserID:   "B123",
 				UserID:      "U123",
@@ -30,18 +30,18 @@ func TestStore_Get_InvalidStoredToken(t *testing.T) {
 		{
 			name: "missing stored access token",
 			item: tokenItem{
-				ID:        defaultTokenID,
-				TeamID:    "T123",
-				BotUserID: "B123",
-				UserID:    "U123",
-				ChannelID: "D123",
+				CognitoSub: testCognitoSub,
+				TeamID:     "T123",
+				BotUserID:  "B123",
+				UserID:     "U123",
+				ChannelID:  "D123",
 			},
 			wantError: "get slack token: stored access token is empty",
 		},
 		{
 			name: "missing stored bot user ID",
 			item: tokenItem{
-				ID:          defaultTokenID,
+				CognitoSub:  testCognitoSub,
 				TeamID:      "T123",
 				AccessToken: "xoxb-test",
 				UserID:      "U123",
@@ -52,7 +52,7 @@ func TestStore_Get_InvalidStoredToken(t *testing.T) {
 		{
 			name: "missing stored user ID",
 			item: tokenItem{
-				ID:          defaultTokenID,
+				CognitoSub:  testCognitoSub,
 				TeamID:      "T123",
 				AccessToken: "xoxb-test",
 				BotUserID:   "B123",
@@ -63,7 +63,7 @@ func TestStore_Get_InvalidStoredToken(t *testing.T) {
 		{
 			name: "missing stored channel ID",
 			item: tokenItem{
-				ID:          defaultTokenID,
+				CognitoSub:  testCognitoSub,
 				TeamID:      "T123",
 				AccessToken: "xoxb-test",
 				BotUserID:   "B123",
@@ -79,10 +79,7 @@ func TestStore_Get_InvalidStoredToken(t *testing.T) {
 
 			attributes, err := attributevalue.MarshalMap(tt.item)
 			if err != nil {
-				t.Fatalf(
-					"failed to marshal test token item: %v",
-					err,
-				)
+				t.Fatalf("failed to marshal test token item: %v", err)
 			}
 
 			client := &stubDynamoDBClient{
@@ -91,45 +88,27 @@ func TestStore_Get_InvalidStoredToken(t *testing.T) {
 				},
 			}
 
-			store := NewStore(
-				client,
-				testTableName,
-			)
+			store := NewStore(client, testTableName)
 
-			got, err := store.Get(
-				context.Background(),
-			)
+			got, err := store.Get(context.Background(), testCognitoSub)
 			if err == nil {
-				t.Fatal(
-					"Get() error = nil, want an error",
-				)
+				t.Fatal("Get() error = nil, want an error")
 			}
 
 			if got != nil {
-				t.Errorf(
-					"Get() token = %#v, want nil",
-					got,
-				)
+				t.Errorf("Get() token = %#v, want nil", got)
 			}
 
 			if err.Error() != tt.wantError {
-				t.Errorf(
-					"Get() error = %q, want %q",
-					err.Error(),
-					tt.wantError,
-				)
+				t.Errorf("Get() error = %q, want %q", err.Error(), tt.wantError)
 			}
 
 			if !client.getItemCalled {
-				t.Fatal(
-					"GetItem() was not called",
-				)
+				t.Fatal("GetItem() was not called")
 			}
 
 			if client.putItemCalled {
-				t.Error(
-					"PutItem() was called by Get()",
-				)
+				t.Error("PutItem() was called by Get()")
 			}
 		})
 	}

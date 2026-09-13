@@ -28,15 +28,16 @@ export const createSlackResources = (
     },
   );
 
-  // Slack OAuthトークン保存用テーブル
+  // CognitoユーザーごとのSlack OAuthトークン保存用テーブル
   const slackTokenTable = new dynamodb.Table(
     scope,
     'SlackTokenTable',
     {
       partitionKey: {
-        name: 'id',
+        name: 'cognito_sub',
         type: dynamodb.AttributeType.STRING,
       },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: props.removalPolicy,
     },
   );

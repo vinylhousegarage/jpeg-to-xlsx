@@ -13,7 +13,7 @@ func TestStore_Get_Success(t *testing.T) {
 	t.Parallel()
 
 	wantItem := tokenItem{
-		ID:          defaultTokenID,
+		CognitoSub:  testCognitoSub,
 		TeamID:      "T123",
 		AccessToken: "xoxb-test",
 		BotUserID:   "B123",
@@ -24,10 +24,7 @@ func TestStore_Get_Success(t *testing.T) {
 
 	attributes, err := attributevalue.MarshalMap(wantItem)
 	if err != nil {
-		t.Fatalf(
-			"failed to marshal test token item: %v",
-			err,
-		)
+		t.Fatalf("failed to marshal test token item: %v", err)
 	}
 
 	client := &stubDynamoDBClient{
@@ -36,19 +33,11 @@ func TestStore_Get_Success(t *testing.T) {
 		},
 	}
 
-	store := NewStore(
-		client,
-		testTableName,
-	)
+	store := NewStore(client, testTableName)
 
-	got, err := store.Get(
-		context.Background(),
-	)
+	got, err := store.Get(context.Background(), testCognitoSub)
 	if err != nil {
-		t.Fatalf(
-			"Get() error = %v",
-			err,
-		)
+		t.Fatalf("Get() error = %v", err)
 	}
 
 	if !client.getItemCalled {
@@ -71,26 +60,24 @@ func TestStore_Get_Success(t *testing.T) {
 		)
 	}
 
-	idAttribute, ok := client.getItemInput.Key["id"]
+	cognitoSubAttribute, ok := client.getItemInput.Key["cognito_sub"]
 	if !ok {
-		t.Fatal(
-			`GetItem() key does not contain "id"`,
-		)
+		t.Fatal(`GetItem() key does not contain "cognito_sub"`)
 	}
 
-	id, ok := idAttribute.(*types.AttributeValueMemberS)
+	cognitoSub, ok := cognitoSubAttribute.(*types.AttributeValueMemberS)
 	if !ok {
 		t.Fatalf(
-			`GetItem() key "id" type = %T, want *types.AttributeValueMemberS`,
-			idAttribute,
+			`GetItem() key "cognito_sub" type = %T, want *types.AttributeValueMemberS`,
+			cognitoSubAttribute,
 		)
 	}
 
-	if id.Value != defaultTokenID {
+	if cognitoSub.Value != testCognitoSub {
 		t.Errorf(
-			`GetItem() key "id" = %q, want %q`,
-			id.Value,
-			defaultTokenID,
+			`GetItem() key "cognito_sub" = %q, want %q`,
+			cognitoSub.Value,
+			testCognitoSub,
 		)
 	}
 
@@ -99,43 +86,23 @@ func TestStore_Get_Success(t *testing.T) {
 	}
 
 	if got.TeamID != wantItem.TeamID {
-		t.Errorf(
-			"Get() TeamID = %q, want %q",
-			got.TeamID,
-			wantItem.TeamID,
-		)
+		t.Errorf("Get() TeamID = %q, want %q", got.TeamID, wantItem.TeamID)
 	}
 
 	if got.AccessToken != wantItem.AccessToken {
-		t.Errorf(
-			"Get() AccessToken = %q, want %q",
-			got.AccessToken,
-			wantItem.AccessToken,
-		)
+		t.Errorf("Get() AccessToken = %q, want %q", got.AccessToken, wantItem.AccessToken)
 	}
 
 	if got.BotUserID != wantItem.BotUserID {
-		t.Errorf(
-			"Get() BotUserID = %q, want %q",
-			got.BotUserID,
-			wantItem.BotUserID,
-		)
+		t.Errorf("Get() BotUserID = %q, want %q", got.BotUserID, wantItem.BotUserID)
 	}
 
 	if got.UserID != wantItem.UserID {
-		t.Errorf(
-			"Get() UserID = %q, want %q",
-			got.UserID,
-			wantItem.UserID,
-		)
+		t.Errorf("Get() UserID = %q, want %q", got.UserID, wantItem.UserID)
 	}
 
 	if got.ChannelID != wantItem.ChannelID {
-		t.Errorf(
-			"Get() ChannelID = %q, want %q",
-			got.ChannelID,
-			wantItem.ChannelID,
-		)
+		t.Errorf("Get() ChannelID = %q, want %q", got.ChannelID, wantItem.ChannelID)
 	}
 
 	if client.putItemCalled {

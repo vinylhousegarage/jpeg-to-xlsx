@@ -10,6 +10,12 @@ import (
 func TestHandler_HandleRequest_Success(t *testing.T) {
 	t.Parallel()
 
+	const (
+		expectedBucket     = "input-bucket"
+		expectedKey        = "test-cognito-sub/SHOT-001.jpg"
+		expectedCognitoSub = "test-cognito-sub"
+	)
+
 	mock := &mockWorkflow{}
 	handler := NewHandler(mock)
 
@@ -18,20 +24,19 @@ func TestHandler_HandleRequest_Success(t *testing.T) {
 			{
 				S3: events.S3Entity{
 					Bucket: events.S3Bucket{
-						Name: "input-bucket",
+						Name: expectedBucket,
 					},
 					Object: events.S3Object{
-						Key: "SHOT-001.jpg",
+						Key: expectedKey,
 					},
 				},
 			},
 		},
 	}
 
-	err := handler.HandleRequest(
-		context.Background(),
-		event,
-	)
+	ctx := context.Background()
+
+	err := handler.HandleRequest(ctx, event)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -41,31 +46,46 @@ func TestHandler_HandleRequest_Success(t *testing.T) {
 	}
 
 	if mock.callCount != 1 {
-		t.Errorf(
-			"expected workflow to be called once, got %d",
-			mock.callCount,
-		)
+		t.Errorf("expected workflow to be called once, got %d", mock.callCount)
 	}
 
-	if mock.bucket != "input-bucket" {
+	if mock.ctx != ctx {
+		t.Error("Execute() received an unexpected context")
+	}
+
+	if mock.inputBucket != expectedBucket {
 		t.Errorf(
 			"expected bucket %q, got %q",
-			"input-bucket",
-			mock.bucket,
+			expectedBucket,
+			mock.inputBucket,
 		)
 	}
 
-	if mock.key != "SHOT-001.jpg" {
+	if mock.inputKey != expectedKey {
 		t.Errorf(
 			"expected key %q, got %q",
-			"SHOT-001.jpg",
-			mock.key,
+			expectedKey,
+			mock.inputKey,
+		)
+	}
+
+	if mock.cognitoSub != expectedCognitoSub {
+		t.Errorf(
+			"expected Cognito sub %q, got %q",
+			expectedCognitoSub,
+			mock.cognitoSub,
 		)
 	}
 }
 
 func TestHandler_HandleRequest_DecodesObjectKey(t *testing.T) {
 	t.Parallel()
+
+	const (
+		encodedKey         = "test-cognito-sub%2FSHOT-001.jpg"
+		expectedKey        = "test-cognito-sub/SHOT-001.jpg"
+		expectedCognitoSub = "test-cognito-sub"
+	)
 
 	mock := &mockWorkflow{}
 	handler := NewHandler(mock)
@@ -78,26 +98,31 @@ func TestHandler_HandleRequest_DecodesObjectKey(t *testing.T) {
 						Name: "input-bucket",
 					},
 					Object: events.S3Object{
-						Key: "images%2FSHOT-001.jpg",
+						Key: encodedKey,
 					},
 				},
 			},
 		},
 	}
 
-	err := handler.HandleRequest(
-		context.Background(),
-		event,
-	)
+	err := handler.HandleRequest(context.Background(), event)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if mock.key != "images/SHOT-001.jpg" {
-		t.Errorf(
-			"expected key %q, got %q",
-			"images/SHOT-001.jpg",
-			mock.key,
-		)
+	if !mock.called {
+		t.Fatal("expected workflow to be called")
+	}
+
+	if mock.callCount != 1 {
+		t.Errorf("expected workflow to be called once, got %d", mock.callCount)
+	}
+
+	if mock.inputKey != expectedKey {
+		t.Errorf("expected key %q, got %q", expectedKey, mock.inputKey)
+	}
+
+	if mock.cognitoSub != expectedCognitoSub {
+		t.Errorf("expected Cognito sub %q, got %q", expectedCognitoSub, mock.cognitoSub)
 	}
 }

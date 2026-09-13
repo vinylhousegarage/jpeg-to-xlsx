@@ -26,9 +26,10 @@ func TestNotifier_Notify_Success(t *testing.T) {
 
 	err := notifier.Notify(
 		ctx,
+		testNotifierCognitoSub,
 		Message{
 			ShotNumber:  "001",
-			DownloadURL: "https://example.com/test.json",
+			DownloadURL: "https://example.com/test.xlsx",
 		},
 	)
 	if err != nil {
@@ -41,6 +42,14 @@ func TestNotifier_Notify_Success(t *testing.T) {
 
 	if tokenStore.ctx != ctx {
 		t.Error("Get() received an unexpected context")
+	}
+
+	if tokenStore.cognitoSub != testNotifierCognitoSub {
+		t.Errorf(
+			"Get() cognitoSub = %q, want %q",
+			tokenStore.cognitoSub,
+			testNotifierCognitoSub,
+		)
 	}
 
 	if !client.called {
@@ -68,6 +77,7 @@ func TestNotifier_Notify_Success(t *testing.T) {
 	}
 
 	const wantText = "撮影番号：001"
+
 	if client.message.Text != wantText {
 		t.Errorf(
 			"PostMessage() message.Text = %q, want %q",
@@ -81,6 +91,7 @@ func TestNotifier_Notify_Success(t *testing.T) {
 	}
 
 	const wantButtonText = "ダウンロード"
+
 	if client.message.Button.Text != wantButtonText {
 		t.Errorf(
 			"PostMessage() button.Text = %q, want %q",
@@ -89,7 +100,8 @@ func TestNotifier_Notify_Success(t *testing.T) {
 		)
 	}
 
-	const wantButtonURL = "https://example.com/test.json"
+	const wantButtonURL = "https://example.com/test.xlsx"
+
 	if client.message.Button.URL != wantButtonURL {
 		t.Errorf(
 			"PostMessage() button.URL = %q, want %q",

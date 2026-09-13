@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -11,7 +12,7 @@ import (
 	authcallback "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/cognito/callback"
 	authlogin "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/cognito/login"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/cognito/oauthstate"
-	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session"
+	authsession "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session"
 	authlogout "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session/logout"
 	authstatus "github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/auth/session/status"
 	"github.com/vinylhousegarage/jpeg-to-xlsx/backend/internal/platform/config"
@@ -19,10 +20,11 @@ import (
 )
 
 type authHandlers struct {
-	login         http.Handler
-	callback      http.Handler
-	sessionStatus http.Handler
-	logout        http.Handler
+	login           http.Handler
+	callback        http.Handler
+	sessionStatus   http.Handler
+	sessionResolver *authsession.Resolver
+	logout          http.Handler
 }
 
 func buildAuthHandlers(
@@ -35,19 +37,19 @@ func buildAuthHandlers(
 	error,
 ) {
 	if ctx == nil {
-		return authHandlers{}, fmt.Errorf(
+		return authHandlers{}, errors.New(
 			"build authentication handlers: context is nil",
 		)
 	}
 
 	if dynamoDBClient == nil {
-		return authHandlers{}, fmt.Errorf(
+		return authHandlers{}, errors.New(
 			"build authentication handlers: DynamoDB client is nil",
 		)
 	}
 
 	if secretLoader == nil {
-		return authHandlers{}, fmt.Errorf(
+		return authHandlers{}, errors.New(
 			"build authentication handlers: secret loader is nil",
 		)
 	}
@@ -119,7 +121,7 @@ func buildAuthHandlers(
 		)
 	}
 
-	sessionStore, err := session.NewDynamoDBStore(
+	sessionStore, err := authsession.NewDynamoDBStore(
 		dynamoDBClient,
 		authConfig.SessionTableName,
 	)
@@ -130,7 +132,7 @@ func buildAuthHandlers(
 		)
 	}
 
-	cookieManager, err := session.NewCookieManager(authConfig.SessionLifetime)
+	cookieManager, err := authsession.NewCookieManager(authConfig.SessionLifetime)
 	if err != nil {
 		return authHandlers{}, fmt.Errorf(
 			"build authentication handlers: create cookie manager: %w",
@@ -138,7 +140,7 @@ func buildAuthHandlers(
 		)
 	}
 
-	sessionResolver, err := session.NewResolver(
+	sessionResolver, err := authsession.NewResolver(
 		cookieManager,
 		sessionStore,
 	)
@@ -149,7 +151,7 @@ func buildAuthHandlers(
 		)
 	}
 
-	sessionIDGenerator := session.NewIDGenerator()
+	sessionIDGenerator := authsession.NewIDGenerator()
 
 	loginHandler, err := authlogin.NewHandler(
 		stateGenerator,
@@ -204,9 +206,10 @@ func buildAuthHandlers(
 	}
 
 	return authHandlers{
-		login:         loginHandler,
-		callback:      callbackHandler,
-		sessionStatus: sessionStatusHandler,
-		logout:        logoutHandler,
+		login:           loginHandler,
+		callback:        callbackHandler,
+		sessionStatus:   sessionStatusHandler,
+		sessionResolver: sessionResolver,
+		logout:          logoutHandler,
 	}, nil
 }

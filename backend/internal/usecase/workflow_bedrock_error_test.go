@@ -18,9 +18,7 @@ func TestWorkflow_Execute_BedrockError(t *testing.T) {
 	workflow := NewWorkflow(
 		&mockS3Getter{
 			getOutput: &s3.GetObjectOutput{
-				Body: io.NopCloser(
-					bytes.NewReader([]byte("fake-image-bytes")),
-				),
+				Body: io.NopCloser(bytes.NewReader([]byte("fake-image-bytes"))),
 			},
 		},
 		&mockS3Putter{},
@@ -36,20 +34,15 @@ func TestWorkflow_Execute_BedrockError(t *testing.T) {
 	err := workflow.Execute(
 		context.Background(),
 		"input-bucket",
-		"SHOT-001.jpg",
+		"test-cognito-sub/SHOT-001.jpg",
+		"test-cognito-sub",
 	)
 	if err == nil {
 		t.Fatal("Execute() error = nil, want an error")
 	}
 
-	if !strings.Contains(
-		err.Error(),
-		"failed to process image with bedrock",
-	) {
-		t.Errorf(
-			"Execute() error = %q, want Bedrock processing error",
-			err.Error(),
-		)
+	if !strings.Contains(err.Error(), "failed to process image with bedrock") {
+		t.Errorf("Execute() error = %q, want Bedrock processing error", err.Error())
 	}
 }
 
@@ -59,9 +52,7 @@ func TestWorkflow_Execute_MarshalError(t *testing.T) {
 	workflow := NewWorkflow(
 		&mockS3Getter{
 			getOutput: &s3.GetObjectOutput{
-				Body: io.NopCloser(
-					bytes.NewReader([]byte("fake-image-bytes")),
-				),
+				Body: io.NopCloser(bytes.NewReader([]byte("fake-image-bytes"))),
 			},
 		},
 		&mockS3Putter{},
@@ -79,19 +70,14 @@ func TestWorkflow_Execute_MarshalError(t *testing.T) {
 	err := workflow.Execute(
 		context.Background(),
 		"input-bucket",
-		"SHOT-001.jpg",
+		"test-cognito-sub/SHOT-001.jpg",
+		"test-cognito-sub",
 	)
 	if err == nil {
 		t.Fatal("Execute() error = nil, want an error")
 	}
 
-	if !strings.Contains(
-		err.Error(),
-		"failed to marshal json",
-	) {
-		t.Errorf(
-			"Execute() error = %q, want JSON marshal error",
-			err.Error(),
-		)
+	if !strings.Contains(err.Error(), "failed to marshal json") {
+		t.Errorf("Execute() error = %q, want JSON marshal error", err.Error())
 	}
 }

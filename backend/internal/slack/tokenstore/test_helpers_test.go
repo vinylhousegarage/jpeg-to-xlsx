@@ -6,7 +6,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-const testTableName = "slack-tokens"
+const (
+	testTableName  = "slack-tokens"
+	testCognitoSub = "cognito-user-123"
+)
 
 type stubDynamoDBClient struct {
 	putItemOutput *dynamodb.PutItemOutput

@@ -11,8 +11,15 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestWorkflow_Execute_SlackError(t *testing.T) {
+func TestWorkflow_Execute_SlackError(
+	t *testing.T,
+) {
 	t.Parallel()
+
+	const (
+		cognitoSub = "test-cognito-sub"
+		inputKey   = "test-cognito-sub/SHOT-001.jpg"
+	)
 
 	slackErr := errors.New("slack error")
 
@@ -23,9 +30,7 @@ func TestWorkflow_Execute_SlackError(t *testing.T) {
 	workflow := NewWorkflow(
 		&mockS3Getter{
 			getOutput: &s3.GetObjectOutput{
-				Body: io.NopCloser(
-					bytes.NewReader([]byte("fake-image-bytes")),
-				),
+				Body: io.NopCloser(bytes.NewReader([]byte("fake-image-bytes"))),
 			},
 		},
 		&mockS3Putter{},
@@ -45,31 +50,33 @@ func TestWorkflow_Execute_SlackError(t *testing.T) {
 	err := workflow.Execute(
 		context.Background(),
 		"input-bucket",
-		"SHOT-001.jpg",
+		inputKey,
+		cognitoSub,
 	)
 	if err == nil {
 		t.Fatal("Execute() error = nil, want an error")
 	}
 
 	if !errors.Is(err, slackErr) {
-		t.Errorf(
-			"Execute() error = %v, want wrapped error %v",
-			err,
-			slackErr,
-		)
+		t.Errorf("Execute() error = %v, want wrapped error %v", err, slackErr)
 	}
 
 	const wantError = "failed to send slack notification: slack error"
+
 	if err.Error() != wantError {
-		t.Errorf(
-			"Execute() error = %q, want %q",
-			err.Error(),
-			wantError,
-		)
+		t.Errorf("Execute() error = %q, want %q", err.Error(), wantError)
 	}
 
 	if !slackNotifier.called {
 		t.Fatal("Notify() was not called")
+	}
+
+	if slackNotifier.cognitoSub != cognitoSub {
+		t.Errorf(
+			"Notify() cognitoSub = %q, want %q",
+			slackNotifier.cognitoSub,
+			cognitoSub,
+		)
 	}
 
 	if slackNotifier.message.ShotNumber != "SHOT-001" {

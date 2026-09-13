@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// モック用の構造体
 type mockPresigner struct {
 	mockResult *v4.PresignedHTTPRequest
 	mockErr    error
@@ -22,19 +21,23 @@ func (m *mockPresigner) PresignPutObject(
 	_ context.Context,
 	params *s3.PutObjectInput,
 	_ ...func(*s3.PresignOptions),
-) (*v4.PresignedHTTPRequest, error) {
+) (
+	*v4.PresignedHTTPRequest,
+	error,
+) {
 	m.gotInput = params
 
 	return m.mockResult, m.mockErr
 }
 
-// 正常系
 func TestService_GeneratePresignURL_Success(t *testing.T) {
 	t.Parallel()
 
 	const (
+		cognitoSub  = "test-cognito-sub"
 		shotNumber  = "001"
 		expectedURL = "https://example.com/presigned-url"
+		expectedKey = "test-cognito-sub/001.jpg"
 	)
 
 	mock := &mockPresigner{
@@ -47,6 +50,7 @@ func TestService_GeneratePresignURL_Success(t *testing.T) {
 
 	url, expiresAt, err := svc.GeneratePresignURL(
 		context.Background(),
+		cognitoSub,
 		shotNumber,
 	)
 	if err != nil {
@@ -54,23 +58,15 @@ func TestService_GeneratePresignURL_Success(t *testing.T) {
 	}
 
 	if url != expectedURL {
-		t.Errorf(
-			"expected URL %q, got %q",
-			expectedURL,
-			url,
-		)
+		t.Errorf("expected URL %q, got %q", expectedURL, url)
 	}
 
 	if mock.gotInput == nil {
 		t.Fatal("PresignPutObject() input is nil")
 	}
 
-	if aws.ToString(mock.gotInput.Key) != "001.jpg" {
-		t.Errorf(
-			"Key = %q, want %q",
-			aws.ToString(mock.gotInput.Key),
-			"001.jpg",
-		)
+	if aws.ToString(mock.gotInput.Key) != expectedKey {
+		t.Errorf("Key = %q, want %q", aws.ToString(mock.gotInput.Key), expectedKey)
 	}
 
 	if aws.ToString(mock.gotInput.ContentType) != "image/jpeg" {
@@ -82,25 +78,23 @@ func TestService_GeneratePresignURL_Success(t *testing.T) {
 	}
 
 	if mock.gotInput.Metadata["shot-number"] != shotNumber {
-		t.Errorf(
-			"Metadata[shot-number] = %q, want %q",
+		t.Errorf("Metadata[shot-number] = %q, want %q",
 			mock.gotInput.Metadata["shot-number"],
 			shotNumber,
 		)
 	}
 
+	if _, exists := mock.gotInput.Metadata["cognito-sub"]; exists {
+		t.Error(`Metadata contains unexpected "cognito-sub"`)
+	}
+
 	remaining := time.Until(expiresAt)
 
-	if remaining > 16*time.Minute ||
-		remaining < 14*time.Minute {
-		t.Errorf(
-			"unexpected expiration time: %v",
-			expiresAt,
-		)
+	if remaining > 16*time.Minute || remaining < 14*time.Minute {
+		t.Errorf("unexpected expiration time: %v", expiresAt)
 	}
 }
 
-// 異常系
 func TestService_GeneratePresignURL_Error(t *testing.T) {
 	t.Parallel()
 
@@ -112,6 +106,7 @@ func TestService_GeneratePresignURL_Error(t *testing.T) {
 
 	_, _, err := svc.GeneratePresignURL(
 		context.Background(),
+		"test-cognito-sub",
 		"001",
 	)
 	if err == nil {

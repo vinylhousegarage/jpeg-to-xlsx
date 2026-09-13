@@ -32,10 +32,7 @@ describe('createSlackResources', () => {
   });
 
   test('creates Slack client secret', () => {
-    template.resourceCountIs(
-      'AWS::SecretsManager::Secret',
-      1,
-    );
+    template.resourceCountIs('AWS::SecretsManager::Secret', 1);
 
     template.hasResourceProperties(
       'AWS::SecretsManager::Secret',
@@ -47,27 +44,24 @@ describe('createSlackResources', () => {
   });
 
   test('creates Slack token table', () => {
-    template.resourceCountIs(
-      'AWS::DynamoDB::Table',
-      1,
-    );
+    template.resourceCountIs('AWS::DynamoDB::Table', 1);
 
     template.hasResourceProperties(
       'AWS::DynamoDB::Table',
       Match.objectLike({
+        BillingMode: 'PAY_PER_REQUEST',
         AttributeDefinitions: [
           {
-            AttributeName: 'id',
+            AttributeName: 'cognito_sub',
             AttributeType: 'S',
           },
         ],
         KeySchema: [
           {
-            AttributeName: 'id',
+            AttributeName: 'cognito_sub',
             KeyType: 'HASH',
           },
         ],
-        ProvisionedThroughput: Match.anyValue(),
       }),
     );
   });
