@@ -31,7 +31,8 @@ export class InfraStack extends cdk.Stack {
     const appEnv = requireEnv('APP_ENV');
     const applicationUrl = requireEnv('APPLICATION_URL');
     const bedrockModelId = requireEnv('BEDROCK_MODEL_ID');
-    const promptFileName = process.env.PROMPT_FILE_NAME || 'extractor.txt';
+    const promptFileName =
+      process.env.PROMPT_FILE_NAME || 'extractor.txt';
     const slackClientId = requireEnv('SLACK_CLIENT_ID');
     const slackRedirectUri = requireEnv('SLACK_REDIRECT_URI');
     const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
@@ -69,15 +70,19 @@ export class InfraStack extends cdk.Stack {
     const computeResources = createComputeResources(this, {
       appEnv,
       bedrockModelId,
-      cognitoAuthorizationEndpoint: authResources.authorizationEndpoint,
-      cognitoClientId: authResources.userPoolClient.userPoolClientId,
-      cognitoClientSecretArn: authResources.cognitoClientSecret.secretArn,
+      cognitoAuthorizationEndpoint:
+        authResources.authorizationEndpoint,
+      cognitoClientId:
+        authResources.userPoolClient.userPoolClientId,
+      cognitoClientSecretArn:
+        authResources.cognitoClientSecret.secretArn,
       cognitoIssuer: authResources.issuer,
       cognitoLogoutEndpoint: authResources.logoutEndpoint,
       cognitoRedirectUri: authResources.redirectUri,
       cognitoTokenEndpoint: authResources.tokenEndpoint,
       inputBucket: storageResources.inputBucket,
-      oauthStateTableName: authResources.oauthStateTable.tableName,
+      oauthStateTableName:
+        authResources.oauthStateTable.tableName,
       outputBucket: storageResources.outputBucket,
       postLoginRedirectUrl: applicationUrl,
       postLogoutRedirectUrl: applicationUrl,
@@ -99,20 +104,28 @@ export class InfraStack extends cdk.Stack {
 
     // API HandlerのSlack権限
 
-    slackResources.slackTokenTable.grantReadWriteData(apiHandler);
+    slackResources.slackTokenTable.grantReadWriteData(
+      apiHandler,
+    );
     slackResources.slackSecret.grantRead(apiHandler);
 
     // API Handlerの認証権限
 
     authResources.cognitoClientSecret.grantRead(apiHandler);
-    authResources.oauthStateTable.grantReadWriteData(apiHandler);
+    authResources.oauthStateTable.grantReadWriteData(
+      apiHandler,
+    );
     authResources.sessionTable.grantReadWriteData(apiHandler);
 
     // Processor Handlerの権限
 
     storageResources.inputBucket.grantRead(processorHandler);
-    storageResources.outputBucket.grantReadWrite(processorHandler);
-    slackResources.slackTokenTable.grantReadData(processorHandler);
+    storageResources.outputBucket.grantReadWrite(
+      processorHandler,
+    );
+    slackResources.slackTokenTable.grantReadData(
+      processorHandler,
+    );
 
     // Processor HandlerにBedrockの実行権限を付与
 
@@ -133,45 +146,9 @@ export class InfraStack extends cdk.Stack {
     // 6. 配信リソースの作成
     // （API Gateway・CloudFront・Frontend）
 
-    const deliveryResources = createDeliveryResources(this, {
+    createDeliveryResources(this, {
       apiHandler,
       websiteBucket: storageResources.websiteBucket,
-    });
-
-    // 7. Outputs
-
-    new cdk.CfnOutput(this, 'CloudFrontURL', {
-      value: deliveryResources.applicationUrl,
-    });
-
-    new cdk.CfnOutput(this, 'SlackClientSecretArn', {
-      value: slackResources.slackSecret.secretArn,
-      description: 'Secrets Manager ARN for the Slack client secret',
-    });
-
-    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
-      value: authResources.userPool.userPoolId,
-      description: 'Cognito user pool ID',
-    });
-
-    new cdk.CfnOutput(this, 'CognitoDomain', {
-      value: authResources.userPoolDomain.baseUrl(),
-      description: 'Cognito managed login domain',
-    });
-
-    new cdk.CfnOutput(this, 'GoogleRedirectUri', {
-      value: authResources.googleRedirectUri,
-      description: 'Redirect URI for the Google OAuth client',
-    });
-
-    new cdk.CfnOutput(this, 'GoogleOAuthClientSecretArn', {
-      value: authResources.googleOAuthSecret.secretArn,
-      description: 'Secrets Manager ARN for the Google OAuth client secret',
-    });
-
-    new cdk.CfnOutput(this, 'CognitoUserPoolClientId', {
-      value: authResources.userPoolClient.userPoolClientId,
-      description: 'Cognito user pool client ID',
     });
   }
 }
