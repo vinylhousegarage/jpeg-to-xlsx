@@ -75,18 +75,18 @@ sequenceDiagram
   participant S3Input as S3<br/>（アップロード用）
 
   User->>Browser: 画像を撮影・送信
-  Browser->>CloudFront: 署名付きURLを要求<br/>Session Cookie付き
+  Browser->>CloudFront: S3署名付きURLを要求<br/>Session Cookie付き
   CloudFront->>API: /api/*を転送
   API->>BFF: URL発行要求
   BFF->>BFF: CookieのSession IDをハッシュ化
   BFF->>SessionDB: id_hashでセッションを取得
   SessionDB-->>BFF: cognito_sub・有効期限
   BFF->>BFF: ログイン状態と入力値を確認
-  BFF->>S3Input: アップロード用署名付きURLを生成
-  S3Input-->>BFF: 署名付きURL
+  BFF->>S3Input: アップロード用S3署名付きURLを生成
+  S3Input-->>BFF: S3署名付きURL
   BFF-->>API: URL・オブジェクトキー
   API-->>CloudFront: APIレスポンス
-  CloudFront-->>Browser: 署名付きURLを返す
+  CloudFront-->>Browser: S3署名付きURLを返す
 ```
 
 ## 6. Slack通知経路
@@ -103,7 +103,7 @@ sequenceDiagram
   participant TokenDB as DynamoDB<br/>（Slackトークン）
   participant Slack as Slack API
 
-  Browser->>S3Input: 署名付きURLで画像をアップロード
+  Browser->>S3Input: S3署名付きURLで画像をアップロード
   S3Input-->>Browser: アップロード成功
 
   S3Input-->>Processor: S3イベントで非同期起動
@@ -116,11 +116,11 @@ sequenceDiagram
 
   Processor->>S3Output: XLSXファイルを保存
   S3Output-->>Processor: 保存完了
-  Processor->>Processor: ダウンロード用署名付きURLを生成
+  Processor->>Processor: ダウンロード用S3署名付きURLを生成
 
   Processor->>TokenDB: Slackトークンを取得
   TokenDB-->>Processor: Skackトークン
-  Processor->>Slack: XLSXの署名付きURLをDM送信
+  Processor->>Slack: XLSXのS3署名付きURLをDM送信
   Slack-->>User: ダウンロードリンクを通知
 ```
 
