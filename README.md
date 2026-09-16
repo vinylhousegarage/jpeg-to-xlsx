@@ -47,7 +47,7 @@ sequenceDiagram
   Cognito->>Google: Google認証へ転送
   User->>Google: アカウント選択・本人確認
   Google-->>Cognito: 認証成功
-  Cognito-->>Browser: code・state付きでLamda（API実行）へ戻す
+  Cognito-->>Browser: code・state付きでLambda（API実行）へ戻す
 
   Browser->>CloudFront: /api/auth/callback
   CloudFront->>API: /api/*を転送
@@ -89,7 +89,7 @@ sequenceDiagram
   CloudFront-->>Browser: S3署名付きURLを返す
 ```
 
-## 6. Slack通知経路
+## 6. XLSX変換・Slack通知経路
 
 ```mermaid
 sequenceDiagram
@@ -119,7 +119,7 @@ sequenceDiagram
   Processor->>Processor: ダウンロード用S3署名付きURLを生成
 
   Processor->>TokenDB: Slackトークンを取得
-  TokenDB-->>Processor: Skackトークン
+  TokenDB-->>Processor: Slackトークン
   Processor->>Slack: XLSXのS3署名付きURLをDM送信
   Slack-->>User: ダウンロードリンクを通知
 ```
