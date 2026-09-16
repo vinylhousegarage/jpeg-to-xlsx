@@ -89,7 +89,7 @@ sequenceDiagram
   CloudFront-->>Browser: S3署名付きURLを返す
 ```
 
-## 6. Slack通知経路
+## 6. XLSX変換・Slack通知経路
 
 ```mermaid
 sequenceDiagram
